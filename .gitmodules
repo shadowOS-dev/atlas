@@ -1,0 +1,6 @@
+[submodule "freestnd-c-hdrs-0bsd"]
+	path = freestnd-c-hdrs-0bsd
+	url = https://github.com/osdev0/freestnd-c-hdrs-0bsd
+[submodule "cc-runtime"]
+	path = cc-runtime
+	url = https://github.com/osdev0/cc-runtime
