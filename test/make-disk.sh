@@ -3,12 +3,14 @@ set -e
 cd "$(dirname "$0")"
 IMAGE_NAME="test"
 
+make -j16 CC=x86_64-elf-gcc -C ..
+
 if [ ! -d "limine" ]; then
   git clone https://github.com/limine-bootloader/limine.git --branch=v9.x-binary --depth=1
 fi
 
 cd limine
-make CC="cc" CFLAGS="-g -O2 -pipe" CPPFLAGS="" LDFLAGS="" LIBS=""
+make CC="cc" CFLAGS="-g -O2 -pipe"
 cd ..
 
 rm -rf iso_root

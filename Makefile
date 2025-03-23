@@ -1,10 +1,3 @@
-######################################################################
-# Atlas Kernel for ShadowOS                                          #
-#                                                                    #
-# Written by Kevin Alavik <kevin@alavik.se>                          #
-# Licensed under the Apache License 2.0                              #
-######################################################################
-
 MAKEFLAGS += -rR
 .SUFFIXES:
 
@@ -66,7 +59,7 @@ override LDFLAGS += \
 	-Wl,--gc-sections \
 	-T linker.ld
 
-override SRCFILES := $(shell find . -type f -name "*.c" -o -name "*.S" -o -name "*.asm" | grep -v "cc-runtime/" | sort)
+override SRCFILES := $(shell find . -type f -name "*.c" -o -name "*.S" -o -name "*.asm" | grep -v "cc-runtime/" | grep -v "^./test/" | sort)
 override CFILES := $(filter %.c,$(SRCFILES))
 override ASFILES := $(filter %.S,$(SRCFILES))
 override NASMFILES := $(filter %.asm,$(SRCFILES))
@@ -86,16 +79,12 @@ all: $(OUTPUT)
 
 -include $(HEADER_DEPS)
 
-build/cc-runtime/cc-runtime.a: Makefile $(wildcard cc-runtime/*)
-	@if [ $(shell find cc-runtime/ -type f -newer build/cc-runtime/cc-runtime.a) ]; then \
+build/cc-runtime/cc-runtime.a: $(wildcard cc-runtime/*)
+	@if [ ! -f build/cc-runtime/cc-runtime.a ] || [ $(shell find cc-runtime/ -type f -newer build/cc-runtime/cc-runtime.a) ]; then \
 		echo "Rebuilding cc-runtime.a..."; \
 		mkdir -p build/cc-runtime; \
 		cp -r cc-runtime/* build/cc-runtime/; \
-		$(MAKE) -C build/cc-runtime -f cc-runtime.mk \
-			CC="$(CC)" \
-			AR="$(AR)" \
-			CFLAGS="$(CFLAGS)" \
-			CPPFLAGS='-isystem ../../freestnd-c-hdrs-0bsd -DCC_RUNTIME_NO_FLOAT'; \
+		$(MAKE) -C build/cc-runtime -f cc-runtime.mk CC="$(CC)" AR="$(AR)" CFLAGS="$(CFLAGS)" CPPFLAGS='-isystem ../../freestnd-c-hdrs-0bsd -DCC_RUNTIME_NO_FLOAT'; \
 	fi
 
 $(OUTPUT): Makefile linker.ld $(OBJ) build/cc-runtime/cc-runtime.a
@@ -116,7 +105,7 @@ build/%.o: %.asm Makefile
 
 .PHONY: clean
 clean:
-	rm -rf build/
+	rm -rf build/ atlas.elf
 
 .PHONY: install
 install: all
