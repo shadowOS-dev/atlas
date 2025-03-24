@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include <limine.h>
+#include <arch/portio.h>
 
 __attribute__((used, section(".limine_requests"))) static volatile LIMINE_BASE_REVISION(3);
 __attribute__((used, section(".limine_requests"))) static volatile struct limine_framebuffer_request framebuffer_req = {
@@ -99,6 +100,8 @@ void _start(void)
     {
         ((uint32_t *)framebuffer->address)[i * (framebuffer->pitch / 4) + i] = 0xffffff;
     }
+
+    outb(0xE9, 'A');
 
     system_halt();
 }
