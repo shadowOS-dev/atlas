@@ -59,20 +59,20 @@ override LDFLAGS += \
 	-Wl,--gc-sections \
 	-T linker.ld
 
-override SRCFILES := $(shell find . -type f -name "*.c" -o -name "*.S" -o -name "*.asm" | grep -v "cc-runtime/" | grep -v "^./test/" | sort)
-override CFILES := $(filter %.c,$(SRCFILES))
-override ASFILES := $(filter %.S,$(SRCFILES))
-override NASMFILES := $(filter %.asm,$(SRCFILES))
+# Collect all source files
+override SRCFILES := $(shell find src -type f -name "*.c" -o -name "*.S" -o -name "*.asm" | grep -v "cc-runtime/" | grep -v "^./test/" | sort)
 
-override OBJ := $(addprefix build/,$(CFILES:./%=%) $(ASFILES:./%=%))
-override OBJ := $(OBJ:.c=.o)
-override OBJ := $(OBJ:.S=.o)
-override OBJ += $(addprefix build/,$(NASMFILES:./%=%))
-override OBJ := $(OBJ:.asm=.o)
+# Separate the source files based on extensions
+override CFILES := $(filter src/%.c,$(SRCFILES))
+override ASFILES := $(filter src/%.S,$(SRCFILES))
+override NASMFILES := $(filter src/%.asm,$(SRCFILES))
 
-override HEADER_DEPS := $(addprefix build/,$(CFILES:./%=%) $(ASFILES:./%=%))
-override HEADER_DEPS := $(HEADER_DEPS:.c=.d)
-override HEADER_DEPS := $(HEADER_DEPS:.S=.d)
+# Ensure object files are placed in the correct build subdirectories
+override OBJ := $(addprefix build/,$(CFILES:src/%.c=%.o) $(ASFILES:src/%.S=%.o) $(NASMFILES:src/%.asm=%.o))
+
+# Handle dependencies
+override HEADER_DEPS := $(addprefix build/,$(CFILES:src/%.c=%.d) $(ASFILES:src/%.S=%.d))
+override HEADER_DEPS := $(patsubst src/%, build/%, $(HEADER_DEPS))
 
 .PHONY: all
 all: $(OUTPUT)
@@ -91,15 +91,16 @@ $(OUTPUT): Makefile linker.ld $(OBJ) build/cc-runtime/cc-runtime.a
 	mkdir -p "$$(dirname $@)"
 	$(LD) $(CFLAGS) $(LDFLAGS) $(OBJ) build/cc-runtime/cc-runtime.a -o $@
 
-build/%.o: %.c Makefile
+# Compilation rules for .c, .S, and .asm files
+build/%.o: src/%.c Makefile
 	mkdir -p "$$(dirname $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-build/%.o: %.S Makefile
+build/%.o: src/%.S Makefile
 	mkdir -p "$$(dirname $@)"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-build/%.o: %.asm Makefile
+build/%.o: src/%.asm Makefile
 	mkdir -p "$$(dirname $@)"
 	nasm $(NASMFLAGS) $< -o $@
 

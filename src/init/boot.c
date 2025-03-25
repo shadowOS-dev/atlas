@@ -75,7 +75,7 @@ int memcmp(const void *s1, const void *s2, size_t n)
     return 0;
 }
 
-static void system_halt(void)
+static void hcf(void)
 {
     for (;;)
     {
@@ -87,12 +87,12 @@ void _start(void)
 {
     if (LIMINE_BASE_REVISION_SUPPORTED == false)
     {
-        system_halt();
+        hcf();
     }
 
     if (framebuffer_req.response == NULL || framebuffer_req.response->framebuffer_count < 1)
     {
-        system_halt();
+        hcf();
     }
 
     struct limine_framebuffer *framebuffer = framebuffer_req.response->framebuffers[0];
@@ -103,5 +103,5 @@ void _start(void)
 
     outb(0xE9, 'A');
 
-    system_halt();
+    hcf();
 }
