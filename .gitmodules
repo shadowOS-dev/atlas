@@ -4,6 +4,6 @@
 [submodule "cc-runtime"]
 	path = cc-runtime
 	url = https://github.com/osdev0/cc-runtime
-[submodule "flanterm"]
-	path = flanterm
+[submodule "src/lib/flanterm"]
+	path = src/lib/flanterm
 	url = https://github.com/mintsuki/flanterm
