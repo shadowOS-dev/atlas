@@ -1,3 +1,5 @@
+module util.cpu;
+
 /*
  * Atlas Kernel - ShadowOS
  *
@@ -5,8 +7,6 @@
  * Author: Kevin Alavik <kevin@alavik.se>
  * Date: March 31, 2025
  */
-
-module util.cpu;
 
 /* Halting functions */
 void halt()
