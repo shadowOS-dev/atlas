@@ -5,79 +5,79 @@ module core.limine;
  *
  * License: Apache 2.0
  * Author: Kevin Alavik <kevin@alavik.se>
- * Date: March 31, 2025
+ * Date: March 32, 2025
  */
 
-/* Misc */
-enum ulong LIMINE_COMMON_MAGIC_1 = 0xc7b1dd30df4c8b88;
-enum ulong LIMINE_COMMON_MAGIC_2 = 0x0a82e883a194f07b;
-
-template LIMINE_BASE_REVISION(uint N)
+/* Miscellaneous Templates */
+template BaseRevision(const char[] N)
 {
-    enum ulong[3] LIMINE_BASE_REVISION = [
-            0xf9562b2d5c95a6c8, 0x6a7b384944536bdc, N
-        ];
+    const char[] BaseRevision = "__gshared pragma(linkerDirective, \"used, section=.limine_requests\")  ulong[3] limine_base_revision = [ 0xf9562b2d5c95a6c8, 0x6a7b384944536bdc, " ~ N ~ "];";
 }
 
-mixin template LIMINE_LINKER_DIRECTIVE()
+template BaseRevisionSupported()
 {
-    __gshared pragma(linkerDirective, "used, section=.limine_requests");
+    const char[] BaseRevisionSupported = "(limine_base_revision[2] == 0)";
+}
+
+template CommonMagic()
+{
+    const char[] CommonMagic = "\"0xc7b1dd30df4c8b88, 0x0a82e883a194f07b\"";
 }
 
 /* Framebuffer */
-enum LIMINE_FRAMEBUFFER_RGB = 1;
-enum LIMINE_FRAMEBUFFER_REQUEST = [
-        LIMINE_COMMON_MAGIC_1, LIMINE_COMMON_MAGIC_2, 0x9d5827dcd881dd75,
-        0xa3148604f6fab11b
-    ];
+template FramebufferRequestID()
+{
+    const char[] FramebufferRequestID = "[ " ~ mixin(
+        CommonMagic!()) ~ ", 0x9d5827dcd881dd75, 0xa3148604f6fab11b ]";
+}
 
-struct limine_video_mode
+struct VideoMode
 {
     ulong pitch;
     ulong width;
     ulong height;
     ushort bpp;
-    ubyte memory_model;
-    ubyte red_mask_size;
-    ubyte red_mask_shift;
-    ubyte green_mask_size;
-    ubyte green_mask_shift;
-    ubyte blue_mask_size;
-    ubyte blue_mask_shift;
+    ubyte memoryModel;
+    ubyte redMaskSize;
+    ubyte redMaskShift;
+    ubyte greenMaskSize;
+    ubyte greenMaskShift;
+    ubyte blueMaskSize;
+    ubyte blueMaskShift;
 }
 
-struct limine_framebuffer
+struct Framebuffer
 {
     void* address;
     ulong width;
     ulong height;
     ulong pitch;
     ushort bpp;
-    ubyte memory_model;
-    ubyte red_mask_size;
-    ubyte red_mask_shift;
-    ubyte green_mask_size;
-    ubyte green_mask_shift;
-    ubyte blue_mask_size;
-    ubyte blue_mask_shift;
+    ubyte memoryModel;
+    ubyte redMaskSize;
+    ubyte redMaskShift;
+    ubyte greenMaskSize;
+    ubyte greenMaskShift;
+    ubyte blueMaskSize;
+    ubyte blueMaskShift;
     ubyte[7] unused;
-    ulong edid_size;
+    ulong edidSize;
     void* edid;
     /* Response revision 1 */
-    ulong mode_count;
-    limine_video_mode*[] modes;
+    ulong modeCount;
+    VideoMode** modes;
 }
 
-struct limine_framebuffer_response
+struct FramebufferResponse
 {
     ulong revision;
-    ulong framebuffer_count;
-    limine_framebuffer*[] framebuffers;
+    ulong framebufferCount;
+    Framebuffer** framebuffers;
 }
 
-struct limine_framebuffer_request
+struct FramebufferRequest
 {
     ulong[4] id;
     ulong revision;
-    limine_framebuffer_response* response;
+    FramebufferResponse* response;
 }
