@@ -23,16 +23,14 @@ static immutable framebuffer_request = limine_framebuffer_request(
     LIMINE_FRAMEBUFFER_REQUEST, 0, null);
 
 // Requests start and end
-// __gshared pragma(linkerDirective, "used, section=.limine_requests_start");
-// extern (C) __gshared ulong[4] limine_requests_start_marker = [
-//     0xf6b8f4b39de7d1ae, 0xfab91a6940fcb9cf,
-//     0x785c6ed015d3e316, 0x181e920a7852b9d9
-// ];
+extern (C) __gshared pragma(linkerDirective, "used, section=.limine_requests_start") ulong[4] limine_requests_start_marker = [
+    0xf6b8f4b39de7d1ae, 0xfab91a6940fcb9cf,
+    0x785c6ed015d3e316, 0x181e920a7852b9d9
+];
 
-// __gshared pragma(linkerDirective, "used, section=.limine_requests_end");
-// extern (C) __gshared ulong[2] limine_requests_end_marker = [
-//     0xadc0e0531bb10d03, 0x9572709f31764c62
-// ];
+extern (C) __gshared pragma(linkerDirective, "used, section=.limine_requests_end") ulong[2] limine_requests_end_marker = [
+    0xadc0e0531bb10d03, 0x9572709f31764c62
+];
 
 /* Utility functions */
 extern (C) void __assert(const(char)* msg, const(char)* file, uint line)
