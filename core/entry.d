@@ -12,6 +12,7 @@ import util.cpu;
 import dev.portio;
 import lib.printf;
 import core.limine;
+import lib.flanterm;
 
 /* Limine Stuff */
 mixin(BaseRevision!("3"));
@@ -39,12 +40,26 @@ extern (C) void kmain()
 
     Framebuffer* framebuffer = framebufferRes.framebuffers[0];
     printf("info: Framebuffer bpp: %d\n", framebuffer.bpp);
+    printf("info: Framebuffer address: %p\n", framebuffer.address);
+    printf("info: Framebuffer width: %d\n", framebuffer.width);
+    printf("info: Framebuffer height: %d\n", framebuffer.height);
 
-    foreach (ulong i; 0 .. 100)
-    {
-        uint* fbPtr = cast(uint*) framebuffer.address;
-        fbPtr[i * (framebuffer.pitch / 4) + i] = 0xffffff;
-    }
+    flanterm_context* ftCtx = flanterm_fb_init(
+        null,
+        null,
+        cast(uint*) framebuffer.address, framebuffer.width, framebuffer.height, framebuffer.pitch,
+        framebuffer.redMaskSize, framebuffer.redMaskShift,
+        framebuffer.greenMaskSize, framebuffer.greenMaskShift,
+        framebuffer.blueMaskSize, framebuffer.blueMaskShift,
+        null,
+        null, null,
+        null, null,
+        null, null,
+        null, 0, 0, 1,
+        0, 0,
+        0);
+    assert(ftCtx, "Failed to initialize flanterm");
+    flanterm_write(ftCtx, "Test".ptr, 4);
 
     halt();
 }
