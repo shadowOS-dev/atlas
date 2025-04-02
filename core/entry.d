@@ -73,6 +73,6 @@ extern (C) void kmain()
         0, 0,
         0);
     assert(ftCtx, "Failed to initialize flanterm");
-    kprintf("Hello");
+    kprintf("Hello, World!");
     halt();
 }
