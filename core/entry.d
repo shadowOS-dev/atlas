@@ -87,5 +87,8 @@ extern (C) void kmain()
     // Interrupts and stuff
     initGDT();
     kprintf("loaded gdt @ 0x%.16llx", gdtPtr.base);
+
+    // we are done
+    kprintf("Atlas kernel v1.0-alpha");
     halt();
 }
