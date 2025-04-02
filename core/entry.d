@@ -15,9 +15,17 @@ import core.limine;
 import lib.flanterm;
 import lib.log;
 import util.string;
+import sys.gdt;
 
 /* Globals */
 __gshared flanterm_context* ftCtx;
+
+struct KernelConfig
+{
+    bool graphical_kprintf;
+}
+
+__gshared KernelConfig kernelConf = KernelConfig(false);
 
 /* Limine Stuff */
 mixin(BaseRevision!("3"));
@@ -46,7 +54,9 @@ extern (C) void kmain()
     assert(kernelFileReq.response, "Failed to get kernel file");
     char* cmdline = kernelFileReq.response.kernelFile.cmdline;
     kprintf("cmdline: %s", cmdline);
+    kernelConf.graphical_kprintf = !isInString(cmdline, "quiet".ptr);
 
+    // Framebuffer shit
     assert(framebufferReq.response != null && framebufferReq.response.framebuffers[0] != null, "Failed to get framebuffer");
     auto framebufferRes = framebufferReq.response;
     kprintf("Got %d framebuffer(s)", framebufferRes.framebufferCount);
@@ -73,6 +83,9 @@ extern (C) void kmain()
         0, 0,
         0);
     assert(ftCtx, "Failed to initialize flanterm");
-    kprintf("Hello, World!");
+
+    // Interrupts and stuff
+    initGDT();
+    kprintf("loaded gdt @ 0x%.16llx", gdtPtr.base);
     halt();
 }

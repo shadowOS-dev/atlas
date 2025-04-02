@@ -12,7 +12,7 @@ import lib.nanoprintf;
 import dev.portio;
 import core.vararg;
 import lib.flanterm;
-import core.entry; // For flanterm writing on printf
+import core.entry; // For flanterm writing on printf and kernelConf
 
 int printf(S...)(S args)
 {
@@ -22,7 +22,7 @@ int printf(S...)(S args)
     extern (C) void putc(int c, void* ctx)
     {
         char ch = cast(char) c;
-        if (ftCtx)
+        if (ftCtx && kernelConf.graphical_kprintf)
         {
             flanterm_write(ftCtx, &ch, 1);
         }
