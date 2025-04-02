@@ -40,6 +40,7 @@ extern (C) void kmain()
 
     Framebuffer* framebuffer = framebufferRes.framebuffers[0];
     printf("info: Framebuffer bpp: %d\n", framebuffer.bpp);
+    printf("info: Framebuffer pitch: %d\n", framebuffer.pitch);
     printf("info: Framebuffer address: %p\n", framebuffer.address);
     printf("info: Framebuffer width: %d\n", framebuffer.width);
     printf("info: Framebuffer height: %d\n", framebuffer.height);
