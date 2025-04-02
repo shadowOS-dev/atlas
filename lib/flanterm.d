@@ -5,7 +5,7 @@ module lib.flanterm;
  *
  * License: Apache 2.0
  * Author: Kevin Alavik <kevin@alavik.se>
- * Date: March 32, 2025
+ * Date: April 1, 2025
  */
 
 // Flanterm copyright notice, at the bottom.

@@ -4,7 +4,7 @@ DC = ldc2
 CC = x86_64-elf-gcc
 LD = x86_64-elf-ld
 NASM = nasm
-DFLAGS = -c -mtriple=x86_64-unknown-elf -fno-rtti -fno-exceptions -betterC --relocation-model=pic -code-model=kernel
+DFLAGS = -c -mtriple=x86_64-unknown-elf -fno-rtti -fno-exceptions -betterC --relocation-model=pic -code-model=kernel -gdwarf
 NANOPRINTF_DEFINES = \
 	-DNANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS=1 \
 	-DNANOPRINTF_USE_PRECISION_FORMAT_SPECIFIERS=1 \
@@ -14,8 +14,31 @@ NANOPRINTF_DEFINES = \
 	-DNANOPRINTF_USE_WRITEBACK_FORMAT_SPECIFIERS=0 \
 	-DNANOPRINTF_SNPRINTF_SAFE_TRIM_STRING_ON_OVERFLOW=1 \
 
-CFLAGS = -ffreestanding -fno-stack-protector -mno-red-zone -m64 -c -O2 -Wall -Wextra -fPIC $(NANOPRINTF_DEFINES)
-LDFLAGS = -nostdlib -T linker.ld
+CFLAGS = \
+	-c -g -O2 -pipe -Wall \
+    -Wextra \
+    -std=gnu11 \
+    -ffreestanding \
+	-nostdlib \
+    -fno-stack-protector \
+    -fno-stack-check \
+    -fno-PIC \
+    -ffunction-sections \
+    -fdata-sections \
+    -m64 \
+    -march=x86-64 \
+    -mno-80387 \
+    -mno-mmx \
+    -mno-sse \
+    -mno-sse2 \
+    -mno-red-zone \
+    -mcmodel=kernel \
+	$(NANOPRINTF_DEFINES)
+LDFLAGS = \
+    -nostdlib \
+    -static \
+    -z max-page-size=0x1000 \
+    -T linker.ld
 
 SOURCES = $(shell find $(SRCDIR) -type f -name '*.d' ! -path './test/*')
 C_SOURCES = $(shell find $(SRCDIR) -type f -name '*.c' ! -path './test/*')
