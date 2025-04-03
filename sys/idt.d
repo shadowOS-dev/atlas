@@ -161,10 +161,7 @@ void handleInterrupt(RegisterCtx* ctx)
 void initIDT()
 {
     idtPtr.limit = cast(ushort)((idt.length * IDTEntry.sizeof) - 1);
-    kprintf("IDTPointer.limit: %d", idtPtr.limit);
     idtPtr.base = cast(ulong)(&idt);
-    kprintf("IDTPointer.base: 0x%.16llx", idtPtr.base);
-    kprintf("stubs base address: 0x%.16llx", cast(ulong)&stubs);
 
     foreach (i; 0 .. 32)
     {

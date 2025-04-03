@@ -111,10 +111,11 @@ extern (C) void kmain()
     initPMM();
 
     int* test = cast(int*) pmm_request_pages(64, true);
-    kprintf("test -> 0x%.16llx", cast(ulong) test);
+    kprintf("test phys alloc -> 0x%.16llx", cast(ulong) test);
     assert(test, "Failed to allocate 64 pages");
     *test = 32;
     pmm_release_pages(test, 64);
+    kprintf("loaded phys bitmap @ 0x%.16llx", cast(ulong)&physBitmap);
 
     // we are done
     kprintf("Atlas kernel v1.0-alpha");

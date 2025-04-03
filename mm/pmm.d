@@ -16,9 +16,9 @@ import lib.math;
 import util.string;
 
 __gshared MemmapResponse* memmap;
-__gshared ubyte[] bitmap;
-__gshared ulong bitmapPages;
-__gshared ulong bitmapSize;
+__gshared ubyte[] physBitmap;
+__gshared ulong physBitmapPages;
+__gshared ulong physBitmapSize;
 __gshared ulong hhdmOffset;
 
 void initPMM()
@@ -40,23 +40,22 @@ void initPMM()
         }
     }
 
-    bitmapPages = high / PAGE_SIZE;
-    bitmapSize = alignUp!ulong(bitmapPages / 8, PAGE_SIZE);
+    physBitmapPages = high / PAGE_SIZE;
+    physBitmapSize = alignUp!ulong(physBitmapPages / 8, PAGE_SIZE);
     kprintf("HHDM Offset: 0x%.16llx", hhdmOffset);
-    kprintf("Bitmap Pages: %d", bitmapPages);
-    kprintf("Bitmap Size: %d", bitmapSize);
+    kprintf("Bitmap Pages: %d", physBitmapPages);
+    kprintf("Bitmap Size: %d", physBitmapSize);
 
     foreach (i; 0 .. memmap.entryCount)
     {
         MemmapEntry* entry = memmap.entries[i];
-        if (entry.type == MemoryMapUsable && entry.length >= bitmapSize)
+        if (entry.type == MemoryMapUsable && entry.length >= physBitmapSize)
         {
             ubyte* bitmapPtr = cast(ubyte*) entry.base + hhdmOffset;
-            bitmap = bitmapPtr[0 .. bitmapSize];
-            memset(cast(void*) bitmap, 0xFF, bitmapSize);
-            entry.base += bitmapSize;
-            entry.length -= bitmapSize;
-            kprintf("Bitmap -> 0x%.16llx", cast(ulong)&bitmap);
+            physBitmap = bitmapPtr[0 .. physBitmapSize];
+            memset(cast(void*) physBitmap, 0xFF, physBitmapSize);
+            entry.base += physBitmapSize;
+            entry.length -= physBitmapSize;
             break;
         }
     }
@@ -68,9 +67,9 @@ void initPMM()
         {
             for (ulong j = entry.base; j < entry.base + entry.length; j += PAGE_SIZE)
             {
-                if (j / PAGE_SIZE < bitmapPages)
+                if (j / PAGE_SIZE < physBitmapPages)
                 {
-                    bitmapClear(bitmap, (j / PAGE_SIZE));
+                    bitmapClear(physBitmap, (j / PAGE_SIZE));
                 }
             }
         }
@@ -81,18 +80,18 @@ void* pmm_request_pages(size_t pages, bool higherHalf)
 {
     ulong lastIdx = 0;
 
-    while (lastIdx < bitmapPages)
+    while (lastIdx < physBitmapPages)
     {
         size_t consecutiveFreePages = 0;
 
         foreach (i; 0 .. pages)
         {
-            if (lastIdx + i >= bitmapPages)
+            if (lastIdx + i >= physBitmapPages)
             {
                 return null;
             }
 
-            if (!bitmapGet(bitmap, lastIdx + i))
+            if (!bitmapGet(physBitmap, lastIdx + i))
             {
                 consecutiveFreePages++;
             }
@@ -107,7 +106,7 @@ void* pmm_request_pages(size_t pages, bool higherHalf)
         {
             foreach (i; 0 .. pages)
             {
-                bitmapSet(bitmap, lastIdx + i);
+                bitmapSet(physBitmap, lastIdx + i);
             }
 
             if (higherHalf)
@@ -131,9 +130,9 @@ void pmm_release_pages(void* ptr, size_t pages)
     ulong start = ((cast(ulong) ptr) / PAGE_SIZE);
     for (uint i = 0; i < pages; ++i)
     {
-        if ((start + i) < bitmapPages)
+        if ((start + i) < physBitmapPages)
         {
-            bitmapClear(bitmap, start + i);
+            bitmapClear(physBitmap, start + i);
         }
     }
 }

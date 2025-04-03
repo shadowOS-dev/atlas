@@ -68,9 +68,7 @@ void initGDT()
     gdt[4] = GDTEntry(0, 0, 0, GDT_USER_DATA, 0x00, 0); // User data segment
 
     gdtPtr.limit = cast(ushort)((gdt.length * GDTEntry.sizeof) - 1);
-    kprintf("GDTPointer.limit: %d", gdtPtr.limit);
     gdtPtr.base = cast(ulong)(&gdt);
-    kprintf("GDTPointer.base: 0x%.16llx", gdtPtr.base);
 
     flushGDT(&gdtPtr);
 }
