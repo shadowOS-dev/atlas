@@ -1,4 +1,4 @@
-module core.limine;
+module init.limine;
 
 /*
  * Atlas Kernel - ShadowOS
@@ -126,4 +126,62 @@ struct KernelFileRequest
     ulong[4] id;
     ulong revision;
     KernelFileResponse* response;
+}
+
+/* Memory map */
+
+template MemoryMapRequestID()
+{
+    const char[] MemoryMapRequestID = "[ " ~ mixin(
+        CommonMagic!()) ~ ", 0x67cf3d9d378a806f, 0xe304acdfc50c3c62 ]";
+}
+
+immutable ulong MemoryMapUsable = 0;
+immutable ulong MemoryMapReserved = 1;
+immutable ulong MemoryMapACPIReclaimable = 2;
+immutable ulong MemoryMapACPINVS = 3;
+immutable ulong MemoryMapBadMemory = 4;
+immutable ulong MemoryMapBootloaderReclaimable = 5;
+immutable ulong MemoryMapKernelAndModules = 6;
+immutable ulong MemoryMapFramebuffer = 7;
+
+struct MemmapEntry
+{
+    ulong base;
+    ulong length;
+    ulong type;
+}
+
+struct MemmapResponse
+{
+    ulong revision;
+    ulong entryCount;
+    MemmapEntry** entries;
+}
+
+struct MemmapRequest
+{
+    ulong[4] id;
+    ulong revision;
+    MemmapResponse* response;
+}
+
+/* Higher half */
+template HHDMRequestID()
+{
+    const char[] HHDMRequestID = "[ " ~ mixin(
+        CommonMagic!()) ~ ", 0x48dcf1cb8ad2b852, 0x63984e959a98244b ]";
+}
+
+struct HHDMResponse
+{
+    ulong revision;
+    ulong offset;
+}
+
+struct HHDMRequest
+{
+    ulong[4] id;
+    ulong revision;
+    HHDMResponse* response;
 }

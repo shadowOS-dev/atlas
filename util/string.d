@@ -8,6 +8,11 @@ module util.string;
  * Date: March 31, 2025
  */
 
+extern (C) void* memcpy(void* dest, const(void)* src, size_t n);
+extern (C) void* memset(void* s, int c, size_t n);
+extern (C) void* memmove(void* dest, const(void)* src, size_t n);
+extern (C) int memcmp(const(void)* s1, const(void)* s2, size_t n);
+
 bool isInString(const(char)* haystack, const(char)* needle)
 {
     if (needle is null || haystack is null || needle[0] == '\0')

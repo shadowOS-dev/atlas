@@ -1,4 +1,4 @@
-module core.entry;
+module init.entry;
 
 /*
  * Atlas Kernel - ShadowOS
@@ -11,12 +11,16 @@ module core.entry;
 import util.cpu;
 import dev.portio;
 import lib.printf;
-import core.limine;
+import init.limine;
 import lib.flanterm;
 import lib.log;
 import util.string;
 import sys.gdt;
 import sys.idt;
+import mm.pmm;
+
+/* Config */
+enum PAGE_SIZE = 0x1000; // 4096
 
 /* Globals */
 __gshared flanterm_context* ftCtx;
@@ -37,6 +41,16 @@ __gshared pragma(linkerDirective, "used, section=.limine_requests") KernelFileRe
 
 __gshared pragma(linkerDirective, "used, section=.limine_requests") FramebufferRequest framebufferReq = {
     id: mixin(FramebufferRequestID!()),
+    revision: 0
+};
+
+__gshared pragma(linkerDirective, "used, section=.limine_requests") MemmapRequest memmapReq = {
+    id: mixin(MemoryMapRequestID!()),
+    revision: 0
+};
+
+__gshared pragma(linkerDirective, "used, section=.limine_requests") HHDMRequest hhdmReq = {
+    id: mixin(HHDMRequestID!()),
     revision: 0
 };
 
@@ -85,11 +99,22 @@ extern (C) void kmain()
         0);
     assert(ftCtx, "Failed to initialize flanterm");
 
-    // Interrupts and stuff
+    // Interrupts
     initGDT();
     kprintf("loaded gdt @ 0x%.16llx", gdtPtr.base);
     initIDT();
     kprintf("loaded idt @ 0x%.16llx", idtPtr.base);
+
+    // Memory and heap
+    assert(memmapReq.response, "Failed to get memory map");
+    assert(hhdmReq.response, "Failed to get HHDM offset");
+    initPMM();
+
+    int* test = cast(int*) pmm_request_pages(4, true);
+    kprintf("test -> 0x%.16llx", cast(ulong) test);
+    assert(test, "Failed to allocate a single test page");
+    *test = 32;
+    pmm_release_pages(test, 4);
 
     // we are done
     kprintf("Atlas kernel v1.0-alpha");

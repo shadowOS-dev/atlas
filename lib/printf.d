@@ -12,7 +12,7 @@ import lib.nanoprintf;
 import dev.portio;
 import core.vararg;
 import lib.flanterm;
-import core.entry; // For flanterm writing on printf and kernelConf
+import init.entry; // For flanterm writing on printf and kernelConf
 
 int printf(S...)(S args)
 {
