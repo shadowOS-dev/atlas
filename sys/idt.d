@@ -56,13 +56,21 @@ __gshared IDTPointer idtPtr = IDTPointer(0);
 
 void setGate(int interrupt, ulong base, ubyte flags)
 {
-    idt[interrupt].offLow = cast(ushort)(base & 0xFFFF);
-    idt[interrupt].sel = 0x08;
-    idt[interrupt].ist = 0;
-    idt[interrupt].attr = flags;
-    idt[interrupt].offMid = cast(ushort)((base >> 16) & 0xFFFF);
-    idt[interrupt].offHigh = cast(uint)((base >> 32) & 0xFFFFFFFF);
-    idt[interrupt].zero = 0;
+    if (interrupt >= idt.length)
+    {
+        kprintf("Invalid interrupt number: %d", interrupt);
+        return;
+    }
+    
+    idt[interrupt] = IDTEntry(
+        cast(ushort)(base & 0xFFFF),
+        0x08,
+        0,
+        flags,
+        cast(ushort)((base >> 16) & 0xFFFF),
+        cast(uint)((base >> 32) & 0xFFFFFFFF),
+        0
+    );
 }
 
 void handleInterrupt(RegisterCtx* ctx)
