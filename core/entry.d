@@ -16,6 +16,7 @@ import lib.flanterm;
 import lib.log;
 import util.string;
 import sys.gdt;
+import sys.idt;
 
 /* Globals */
 __gshared flanterm_context* ftCtx;
@@ -87,8 +88,12 @@ extern (C) void kmain()
     // Interrupts and stuff
     initGDT();
     kprintf("loaded gdt @ 0x%.16llx", gdtPtr.base);
+    initIDT();
+    kprintf("loaded idt @ 0x%.16llx", idtPtr.base);
 
     // we are done
     kprintf("Atlas kernel v1.0-alpha");
+
+    *cast(ulong*) 0xdeadbeef = 69;
     halt();
 }

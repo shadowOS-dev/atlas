@@ -12,8 +12,7 @@ NANOPRINTF_DEFINES = \
 	-DNANOPRINTF_USE_LARGE_FORMAT_SPECIFIERS=1 \
 	-DNANOPRINTF_USE_BINARY_FORMAT_SPECIFIERS=0 \
 	-DNANOPRINTF_USE_WRITEBACK_FORMAT_SPECIFIERS=0 \
-	-DNANOPRINTF_SNPRINTF_SAFE_TRIM_STRING_ON_OVERFLOW=1 \
-
+	-DNANOPRINTF_SNPRINTF_SAFE_TRIM_STRING_ON_OVERFLOW=1
 CFLAGS = \
 	-c -g -O2 -pipe -Wall \
     -Wextra \
@@ -43,9 +42,11 @@ LDFLAGS = \
 SOURCES = $(shell find $(SRCDIR) -type f -name '*.d' ! -path './test/*')
 C_SOURCES = $(shell find $(SRCDIR) -type f -name '*.c' ! -path './test/*')
 ASM_SOURCES = $(shell find $(SRCDIR) -type f -name '*.asm' ! -path './test/*')
+GAS_SOURCES = $(shell find $(SRCDIR) -type f -name '*.S' ! -path './test/*')
 OBJECTS = $(patsubst ./%, $(BUILDDIR)/%, $(SOURCES:.d=.o)) \
           $(patsubst ./%, $(BUILDDIR)/_c_%, $(C_SOURCES:.c=.o)) \
-          $(patsubst ./%, $(BUILDDIR)/_asm_%, $(ASM_SOURCES:.asm=.o))
+          $(patsubst ./%, $(BUILDDIR)/_asm_%, $(ASM_SOURCES:.asm=.o)) \
+          $(patsubst ./%, $(BUILDDIR)/_gas_%, $(GAS_SOURCES:.S=.o))
 
 KERNEL = $(BUILDDIR)/atlas.elf
 
@@ -65,6 +66,10 @@ $(BUILDDIR)/_c_%.o: %.c
 $(BUILDDIR)/_asm_%.o: %.asm
 	@mkdir -p $(dir $@)
 	$(NASM) -f elf64 -o $@ $<
+
+$(BUILDDIR)/_gas_%.o: %.S
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -rf $(BUILDDIR)/*
