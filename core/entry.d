@@ -93,7 +93,5 @@ extern (C) void kmain()
 
     // we are done
     kprintf("Atlas kernel v1.0-alpha");
-
-    *cast(ulong*) 0xdeadbeef = 69;
     halt();
 }

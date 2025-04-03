@@ -54,6 +54,41 @@ extern (C) __gshared IDTIntrHandler[256] realHandlers = void;
 extern (C) extern __gshared ulong[256] stubs;
 __gshared IDTPointer idtPtr = IDTPointer(0);
 
+__gshared immutable string[32] exceptionMessages = [
+    "Division by Zero",
+    "Debug",
+    "Non-Maskable-Interrupt",
+    "Breakpoint",
+    "Overflow",
+    "Bound Range Exceeded",
+    "Invalid opcode",
+    "Device (FPU) not available",
+    "Double Fault",
+    "RESERVED VECTOR",
+    "Invalid TSS",
+    "Segment not present",
+    "Stack Segment Fault",
+    "General Protection Fault",
+    "Page Fault",
+    "RESERVED VECTOR",
+    "x87 FP Exception",
+    "Alignment Check",
+    "Machine Check (Internal Error)",
+    "SIMD FP Exception",
+    "Virtualization Exception",
+    "Control Protection Exception",
+    "RESERVED VECTOR",
+    "RESERVED VECTOR",
+    "RESERVED VECTOR",
+    "RESERVED VECTOR",
+    "RESERVED VECTOR",
+    "RESERVED VECTOR",
+    "Hypervisor Injection Exception",
+    "VMM Communication Exception",
+    "Security Exception",
+    "RESERVED VECTOR"
+];
+
 void setGate(int interrupt, ulong base, ubyte flags)
 {
     if (interrupt >= idt.length)
@@ -71,9 +106,56 @@ void setGate(int interrupt, ulong base, ubyte flags)
     idt[interrupt].zero = 0;
 }
 
+void _renderRegister(const char* label, ulong value)
+{
+    kprintf("\t%-8.3s: 0x%.16lx", label, value);
+}
+
 void handleInterrupt(RegisterCtx* ctx)
 {
-    assert(null, "kernel panic");
+    kprintf("\x1b[31m%s at 0x%.16llx\x1b[0m", exceptionMessages[ctx.vector].ptr, ctx.rip);
+
+    _renderRegister("rip", ctx.rip);
+    _renderRegister("cs", ctx.cs);
+    _renderRegister("rflags", ctx.rflags);
+    _renderRegister("rsp", ctx.rsp);
+    kprintf("--------------------------------");
+
+    _renderRegister("ss", ctx.ss);
+    _renderRegister("rax", ctx.rax);
+    _renderRegister("rbx", ctx.rbx);
+    _renderRegister("rcx", ctx.rcx);
+    kprintf("--------------------------------");
+
+    _renderRegister("rdx", ctx.rdx);
+    _renderRegister("rbp", ctx.rbp);
+    _renderRegister("rdi", ctx.rdi);
+    _renderRegister("rsi", ctx.rsi);
+    kprintf("--------------------------------");
+
+    _renderRegister("r8", ctx.r8);
+    _renderRegister("r9", ctx.r9);
+    _renderRegister("r10", ctx.r10);
+    _renderRegister("r11", ctx.r11);
+    kprintf("--------------------------------");
+
+    _renderRegister("r12", ctx.r12);
+    _renderRegister("r13", ctx.r13);
+    _renderRegister("r14", ctx.r14);
+    _renderRegister("r15", ctx.r15);
+    kprintf("--------------------------------");
+
+    _renderRegister("cr0", ctx.cr0);
+    _renderRegister("cr2", ctx.cr2);
+    _renderRegister("cr3", ctx.cr3);
+    _renderRegister("cr4", ctx.cr4);
+    kprintf("--------------------------------");
+
+    _renderRegister("es", ctx.es);
+    _renderRegister("ds", ctx.ds);
+    kprintf("--------------------------------");
+
+    hcf();
 }
 
 void initIDT()
