@@ -20,6 +20,7 @@ __gshared ubyte[] bitmap;
 __gshared ulong bitmapPages;
 __gshared ulong bitmapSize;
 __gshared ulong hhdmOffset;
+
 void initPMM()
 {
     memmap = memmapReq.response;
@@ -67,7 +68,10 @@ void initPMM()
         {
             for (ulong j = entry.base; j < entry.base + entry.length; j += PAGE_SIZE)
             {
-                bitmapClear(bitmap, (j / PAGE_SIZE));
+                if (j / PAGE_SIZE < bitmapPages)
+                {
+                    bitmapClear(bitmap, (j / PAGE_SIZE));
+                }
             }
         }
     }
@@ -83,6 +87,11 @@ void* pmm_request_pages(size_t pages, bool higherHalf)
 
         foreach (i; 0 .. pages)
         {
+            if (lastIdx + i >= bitmapPages)
+            {
+                return null;
+            }
+
             if (!bitmapGet(bitmap, lastIdx + i))
             {
                 consecutiveFreePages++;
@@ -119,10 +128,12 @@ void* pmm_request_pages(size_t pages, bool higherHalf)
 
 void pmm_release_pages(void* ptr, size_t pages)
 {
-
     ulong start = ((cast(ulong) ptr) / PAGE_SIZE);
     for (uint i = 0; i < pages; ++i)
     {
-        bitmapClear(bitmap, start + i);
+        if ((start + i) < bitmapPages)
+        {
+            bitmapClear(bitmap, start + i);
+        }
     }
 }

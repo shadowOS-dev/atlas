@@ -110,11 +110,11 @@ extern (C) void kmain()
     assert(hhdmReq.response, "Failed to get HHDM offset");
     initPMM();
 
-    int* test = cast(int*) pmm_request_pages(4, true);
+    int* test = cast(int*) pmm_request_pages(64, true);
     kprintf("test -> 0x%.16llx", cast(ulong) test);
-    assert(test, "Failed to allocate a single test page");
+    assert(test, "Failed to allocate 64 pages");
     *test = 32;
-    pmm_release_pages(test, 4);
+    pmm_release_pages(test, 64);
 
     // we are done
     kprintf("Atlas kernel v1.0-alpha");
