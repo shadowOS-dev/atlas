@@ -76,7 +76,7 @@ void initPMM()
     }
 }
 
-void* pmm_request_pages(size_t pages, bool higherHalf)
+void* physRequestPages(size_t pages, bool higherHalf)
 {
     ulong lastIdx = 0;
 
@@ -125,7 +125,7 @@ void* pmm_request_pages(size_t pages, bool higherHalf)
     return null;
 }
 
-void pmm_release_pages(void* ptr, size_t pages)
+void physReleasePages(void* ptr, size_t pages)
 {
     ulong start = ((cast(ulong) ptr) / PAGE_SIZE);
     for (uint i = 0; i < pages; ++i)

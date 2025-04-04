@@ -12,12 +12,11 @@ import lib.log;
 import sys.gdt;
 import util.cpu;
 
-// Defines
+/* Defines */
 enum IDT_INTERRUPT_GATE = 0x8E;
 enum IDT_TRAP_GATE = 0x8F;
 enum IDT_IRQ_BASE = 0x20;
 
-// Structs
 struct IDTEntry
 {
 align(1):
@@ -47,7 +46,7 @@ align(1):
     ulong rip, cs, rflags, rsp, ss;
 }
 
-// Main
+/* Globals */
 __gshared align(16) IDTEntry[256] idt = IDTEntry(0);
 extern (C) alias IDTIntrHandler = void function(RegisterCtx* refs);
 extern (C) __gshared IDTIntrHandler[256] realHandlers = void;
@@ -89,6 +88,7 @@ __gshared immutable string[32] exceptionMessages = [
     "RESERVED VECTOR"
 ];
 
+/* Generic */
 void setGate(int interrupt, ulong base, ubyte flags)
 {
     if (interrupt >= idt.length)

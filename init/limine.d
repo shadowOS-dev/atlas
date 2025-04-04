@@ -108,7 +108,7 @@ struct FramebufferRequest
     FramebufferResponse* response;
 }
 
-/* Files (kernel file) */
+/* Kernel file */
 template KernelFileRequestID()
 {
     const char[] KernelFileRequestID = "[ " ~ mixin(
@@ -129,7 +129,6 @@ struct KernelFileRequest
 }
 
 /* Memory map */
-
 template MemoryMapRequestID()
 {
     const char[] MemoryMapRequestID = "[ " ~ mixin(
@@ -184,4 +183,25 @@ struct HHDMRequest
     ulong[4] id;
     ulong revision;
     HHDMResponse* response;
+}
+
+/* Kernel address */
+template KernelAddressRequestID()
+{
+    const char[] KernelAddressRequestID = "[ " ~ mixin(
+        CommonMagic!()) ~ ", 0x71ba76863cc55f63, 0xb2644a48c516a487 ]";
+}
+
+struct KernelAddressResponse
+{
+    ulong revision;
+    ulong physicalBase;
+    ulong virtualBase;
+}
+
+struct KernelAddressRequest
+{
+    ulong[4] id;
+    ulong revision;
+    KernelAddressResponse* response;
 }
