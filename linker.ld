@@ -38,12 +38,12 @@ SECTIONS
     .data : {
         dataStart = .;
         *(.data .data.*)
-        dataEnd = .;
     } :data
 
     .bss : {
         *(.bss .bss.*)
         *(COMMON)
+        dataEnd = .;
     } :data
 
     /DISCARD/ : {
