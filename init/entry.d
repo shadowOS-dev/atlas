@@ -138,6 +138,6 @@ extern (C) void kmain()
     initVMM();
 
     // we are done
-    kprintf("Atlas kernel v1.0-alpha");
+    kprintf("Atlas kernel v1.0-alpha, very cool :3");
     halt();
 }
