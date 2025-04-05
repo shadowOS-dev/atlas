@@ -5,7 +5,7 @@ module mm.vmm;
  *
  * License: Apache 2.0
  * Author: Kevin Alavik <kevin@alavik.se>
- * Date: April 3, 2025
+ * Date: April 5, 2025
  */
 
 import mm.pmm;
@@ -35,63 +35,67 @@ alias PageMap = ulong*;
 /* Globals */
 __gshared PageMap kernelPagemap;
 
-/* Main */
+/* Functions */
 ulong virtToPhys(PageMap pagemap, ulong virt)
 {
-    ulong pml1Idx = (virt & (0x1FFLU << 12)) >> 12;
-    ulong pml2Idx = (virt & (0x1FFLU << 21)) >> 21;
-    ulong pml3Idx = (virt & (0x1FFLU << 30)) >> 30;
-    ulong pml4Idx = (virt & (0x1FFLU << 39)) >> 39;
+    ulong pml1Idx = (virt >> 12) & 0x1FF;
+    ulong pml2Idx = (virt >> 21) & 0x1FF;
+    ulong pml3Idx = (virt >> 30) & 0x1FF;
+    ulong pml4Idx = (virt >> 39) & 0x1FF;
 
     if (!(pagemap[pml4Idx] & 1))
         return 0;
-    ulong* pml3 = cast(ulong*)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml3[pml3Idx] & 1))
         return 0;
-    ulong* pml2 = cast(ulong*)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml2[pml2Idx] & 1))
         return 0;
-    ulong* pml1 = cast(ulong*)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    if (!(pml1[pml1Idx] & 1))
+        return 0;
+
     return pml1[pml1Idx] & 0x000FFFFFFFFFF000;
 }
 
 void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
 {
-    ulong pml1Idx = (virt & (0x1FFLU << 12)) >> 12;
-    ulong pml2Idx = (virt & (0x1FFLU << 21)) >> 21;
-    ulong pml3Idx = (virt & (0x1FFLU << 30)) >> 30;
-    ulong pml4Idx = (virt & (0x1FFLU << 39)) >> 39;
+    ulong pml1Idx = (virt >> 12) & 0x1FF;
+    ulong pml2Idx = (virt >> 21) & 0x1FF;
+    ulong pml3Idx = (virt >> 30) & 0x1FF;
+    ulong pml4Idx = (virt >> 39) & 0x1FF;
+    kprintf("Mapping 0x%.16llx -> 0x%.16llx (flags: 0x%x)", virt, phys, flags);
 
     if (!(pagemap[pml4Idx] & 1))
     {
-        ulong newPage = cast(ulong) physRequestPages(1, false);
-        assert(newPage != 0, "Failed to allocate page table");
-        pagemap[pml4Idx] = newPage | 0b111;
+        ulong newPagePhys = cast(ulong) physRequestPages(1, false);
+        assert(newPagePhys != 0, "Failed to allocate PML3");
+        pagemap[pml4Idx] = newPagePhys | 0b111;
     }
 
-    PageMap pml3 = cast(ulong*)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml3[pml3Idx] & 1))
     {
-        ulong newPage = cast(ulong) physRequestPages(1, false);
-        assert(newPage != 0, "Failed to allocate page table");
-        pml3[pml3Idx] = newPage | 0b111;
+        ulong newPagePhys = cast(ulong) physRequestPages(1, false);
+        assert(newPagePhys != 0, "Failed to allocate PML2");
+        pml3[pml3Idx] = newPagePhys | 0b111;
     }
 
-    PageMap pml2 = cast(ulong*)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml2[pml2Idx] & 1))
     {
-        ulong newPage = cast(ulong) physRequestPages(1, false);
-        assert(newPage != 0, "Failed to allocate page table");
-        pml2[pml2Idx] = newPage | 0b111;
+        ulong newPagePhys = cast(ulong) physRequestPages(1, false);
+        assert(newPagePhys != 0, "Failed to allocate PML1");
+        pml2[pml2Idx] = newPagePhys | 0b111;
     }
 
-    PageMap pml1 = cast(ulong*)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     pml1[pml1Idx] = phys | flags;
 }
 
 void virtUnMap(PageMap pagemap, ulong virt)
 {
-    assert(false, "unimplemented");
+    assert(false, "virtUnMap is unimplemented");
 }
 
 void switchPagemap(PageMap pagemap)
@@ -107,58 +111,57 @@ void switchPagemap(PageMap pagemap)
 
 void initVMM()
 {
-    kernelPagemap = cast(PageMap) physRequestPages(1, true);
-    assert(kernelPagemap, "Failed to allocate page for kernel pagemap");
-    kprintf("Kernel Pagemap is @ 0x%.16llx", cast(ulong) kernelPagemap);
+    kernelPagemap = cast(PageMap)(cast(ulong) physRequestPages(1, true));
+    assert(
+        kernelPagemap, "Failed to allocate kernel pagemap");
     memset(kernelPagemap, 0, PAGE_SIZE);
-    kprintf("Kernel Stack Top Address: 0x%.16llx", kernelStackTop);
-    kprintf("Got kernel phys: 0x%.16llx, virt: 0x%.16llx", kernelAddrPhys, kernelAddrVirt);
-    kprintf("Sections:");
-    kprintf("  limine: start=0x%.16llx, end=0x%.16llx", cast(ulong)&limineStart, cast(ulong)&limineEnd);
-    kprintf("  text  : start=0x%.16llx, end=0x%.16llx", cast(ulong)&textStart, cast(ulong)&textEnd);
-    kprintf("  rodata: start=0x%.16llx, end=0x%.16llx", cast(ulong)&rodataStart, cast(ulong)&rodataEnd);
-    kprintf("  data  : start=0x%.16llx, end=0x%.16llx", cast(ulong)&dataStart, cast(ulong)&dataEnd);
 
-    for (ulong i = alignDown!ulong(cast(ulong)&limineStart, PAGE_SIZE); i < alignUp!ulong(
+    kprintf("Kernel Pagemap is @ 0x%.16llx", cast(ulong) kernelPagemap);
+    kprintf(
+        "Kernel Stack Top Address: 0x%.16llx", kernelStackTop);
+    kprintf(
+        "Got kernel phys: 0x%.16llx, virt: 0x%.16llx", kernelAddrPhys, kernelAddrVirt);
+
+    kprintf("Sections:");
+    kprintf("  limine: start=0x%.16llx, end=0x%.16llx", cast(ulong)&limineStart, cast(
+            ulong)&limineEnd);
+    kprintf("  text  : start=0x%.16llx, end=0x%.16llx", cast(ulong)&textStart, cast(
+            ulong)&textEnd);
+    kprintf("  rodata: start=0x%.16llx, end=0x%.16llx", cast(ulong)&rodataStart, cast(
+            ulong)&rodataEnd);
+    kprintf("  data  : start=0x%.16llx, end=0x%.16llx", cast(ulong)&dataStart, cast(
+            ulong)&dataEnd);
+
+    for (ulong i = 0; i < 0x100000000; i += PAGE_SIZE)
+        virtMap(kernelPagemap, i + hhdmOffset, i, VMM_PRESENT | VMM_WRITE);
+    kprintf("Mapped HHDM");
+
+    for (ulong i = alignDown!ulong(
+            cast(ulong)&limineStart, PAGE_SIZE); i < alignUp!ulong(
             cast(ulong)&limineEnd, PAGE_SIZE); i += PAGE_SIZE)
-    {
         virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_WRITE);
-    }
     kprintf("Mapped limine section");
 
-    kernelStackTop = alignUp!ulong(kernelStackTop, PAGE_SIZE);
-    for (ulong i = kernelStackTop - 65535; i < kernelStackTop; i += PAGE_SIZE)
-    {
+    kernelStackTop = alignUp!ulong(
+        kernelStackTop, PAGE_SIZE);
+    for (ulong i = kernelStackTop - 65536; i < kernelStackTop; i += PAGE_SIZE)
         virtMap(kernelPagemap, i, i - hhdmOffset, VMM_PRESENT | VMM_WRITE | VMM_NX);
-    }
     kprintf("Mapped kernel stack");
 
     for (ulong i = alignDown!ulong(cast(ulong)&textStart, PAGE_SIZE); i < alignUp!ulong(
             cast(ulong)&textEnd, PAGE_SIZE); i += PAGE_SIZE)
-    {
         virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT);
-    }
     kprintf("Mapped text section");
 
     for (ulong i = alignDown!ulong(cast(ulong)&rodataStart, PAGE_SIZE); i < alignUp!ulong(
             cast(ulong)&rodataEnd, PAGE_SIZE); i += PAGE_SIZE)
-    {
         virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_NX);
-    }
     kprintf("Mapped rodata section");
 
     for (ulong i = alignDown!ulong(cast(ulong)&dataStart, PAGE_SIZE); i < alignUp!ulong(
             cast(ulong)&dataEnd, PAGE_SIZE); i += PAGE_SIZE)
-    {
         virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_WRITE | VMM_NX);
-    }
     kprintf("Mapped data section");
-
-    for (ulong i; i < 0x100000000; i += PAGE_SIZE)
-    {
-        virtMap(kernelPagemap, i + hhdmOffset, i, VMM_PRESENT | VMM_WRITE);
-    }
-    kprintf("Mapped HHDM");
 
     switchPagemap(kernelPagemap);
 }
