@@ -64,7 +64,6 @@ void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
     ulong pml2Idx = (virt >> 21) & 0x1FF;
     ulong pml3Idx = (virt >> 30) & 0x1FF;
     ulong pml4Idx = (virt >> 39) & 0x1FF;
-    kprintf("Mapping 0x%.16llx -> 0x%.16llx (flags: 0x%x)", virt, phys, flags);
 
     if (!(pagemap[pml4Idx] & 1))
     {
@@ -73,7 +72,8 @@ void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
         pagemap[pml4Idx] = newPagePhys | 0b111;
     }
 
-    PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml3 = cast(PageMap) alignUp!ulong(
+        ((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset), PAGE_SIZE);
     if (!(pml3[pml3Idx] & 1))
     {
         ulong newPagePhys = cast(ulong) physRequestPages(1, false);
@@ -81,7 +81,8 @@ void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
         pml3[pml3Idx] = newPagePhys | 0b111;
     }
 
-    PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml2 = cast(PageMap) alignUp!ulong(
+        ((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset), PAGE_SIZE);
     if (!(pml2[pml2Idx] & 1))
     {
         ulong newPagePhys = cast(ulong) physRequestPages(1, false);
@@ -89,7 +90,8 @@ void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
         pml2[pml2Idx] = newPagePhys | 0b111;
     }
 
-    PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+    PageMap pml1 = cast(PageMap) alignUp!ulong(
+        ((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset), PAGE_SIZE);
     pml1[pml1Idx] = phys | flags;
 }
 
