@@ -43,16 +43,16 @@ ulong virtToPhys(PageMap pagemap, ulong virt)
     ulong pml3Idx = (virt >> 30) & 0x1FF;
     ulong pml4Idx = (virt >> 39) & 0x1FF;
 
-    if (!(pagemap[pml4Idx] & 1))
+    if (!(pagemap[pml4Idx] & VMM_PRESENT))
         return 0;
     PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml3[pml3Idx] & 1))
+    if (!(pml3[pml3Idx] & VMM_PRESENT))
         return 0;
     PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml2[pml2Idx] & 1))
+    if (!(pml2[pml2Idx] & VMM_PRESENT))
         return 0;
     PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml1[pml1Idx] & 1))
+    if (!(pml1[pml1Idx] & VMM_PRESENT))
         return 0;
 
     return pml1[pml1Idx] & 0x000FFFFFFFFFF000;
@@ -60,42 +60,54 @@ ulong virtToPhys(PageMap pagemap, ulong virt)
 
 void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
 {
-    ulong pml1Idx = (virt & cast(ulong) 0x1ff << 12) >> 12;
-    ulong pml2Idx = (virt & cast(ulong) 0x1ff << 21) >> 21;
-    ulong pml3Idx = (virt & cast(ulong) 0x1ff << 30) >> 30;
-    ulong pml4Idx = (virt & cast(ulong) 0x1ff << 39) >> 39;
+    ulong pml1Idx = (virt >> 12) & 0x1FF;
+    ulong pml2Idx = (virt >> 21) & 0x1FF;
+    ulong pml3Idx = (virt >> 30) & 0x1FF;
+    ulong pml4Idx = (virt >> 39) & 0x1FF;
 
     if (!(pagemap[pml4Idx] & VMM_PRESENT))
     {
-        pagemap[pml4Idx] = cast(ulong) physRequestPages(1, false) | 0b111;
+        pagemap[pml4Idx] = cast(ulong) physRequestPages(1, false) | VMM_PRESENT | VMM_WRITE;
     }
 
     PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml3[pml3Idx] & VMM_PRESENT))
-    {
-        pml3[pml3Idx] = cast(ulong) physRequestPages(1, false) | 0b111;
-    }
+        pml3[pml3Idx] = cast(ulong) physRequestPages(1, false) | VMM_PRESENT | VMM_WRITE;
 
     PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml2[pml2Idx] & VMM_PRESENT))
-    {
-        pml2[pml2Idx] = cast(ulong) physRequestPages(1, false) | 0b111;
-    }
+        pml2[pml2Idx] = cast(ulong) physRequestPages(1, false) | VMM_PRESENT | VMM_WRITE;
 
     PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if(!(pml1[pml1Idx] & 1)) {
+    if (!(pml1[pml1Idx] & VMM_PRESENT))
         pml1[pml1Idx] = phys | flags;
-    }
-
-    asm
-    {
-        invlpg virt;
-    }
+    else
+        pml1[pml1Idx] = (pml1[pml1Idx] & ~0x000FFFFFFFFFF000) | (phys & 0x000FFFFFFFFFF000) | flags;
 }
 
 void virtUnMap(PageMap pagemap, ulong virt)
 {
-    assert(false, "virtUnMap is unimplemented");
+    ulong pml1Idx = (virt >> 12) & 0x1FF;
+    ulong pml2Idx = (virt >> 21) & 0x1FF;
+    ulong pml3Idx = (virt >> 30) & 0x1FF;
+    ulong pml4Idx = (virt >> 39) & 0x1FF;
+
+    if (pagemap[pml4Idx] & VMM_PRESENT)
+    {
+        PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+        if (pml3[pml3Idx] & VMM_PRESENT)
+        {
+            PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+            if (pml2[pml2Idx] & VMM_PRESENT)
+            {
+                PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
+                if (pml1[pml1Idx] & VMM_PRESENT)
+                {
+                    pml1[pml1Idx] = 0;
+                }
+            }
+        }
+    }
 }
 
 void switchPagemap(PageMap pagemap)

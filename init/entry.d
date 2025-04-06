@@ -19,6 +19,7 @@ import sys.gdt;
 import sys.idt;
 import mm.pmm;
 import mm.vmm;
+import mm.vma;
 
 /* Config */
 enum PAGE_SIZE = 0x1000; // 4096
@@ -125,20 +126,25 @@ extern (C) void kmain()
     initPMM();
 
     ulong numPages = 1024;
-    int* test = cast(int*) physRequestPages(numPages, true);
-    kprintf("test phys alloc -> 0x%.16llx", cast(ulong) test);
-    assert(test, "Failed to allocate pages");
-    *test = 32;
-    physReleasePages(test, numPages);
+    int* a = cast(int*) physRequestPages(numPages, true);
+    assert(a, "Failed to allocate pages");
+    kprintf("test phys alloc -> 0x%.16llx", cast(ulong) a);
+    *a = 32;
+    physReleasePages(a, numPages);
     kprintf("loaded phys bitmap @ 0x%.16llx", cast(ulong)&physBitmap);
 
     assert(kernelAddrReq.response, "Failed to get kernel address");
     kernelAddrPhys = kernelAddrReq.response.physicalBase;
     kernelAddrVirt = kernelAddrReq.response.virtualBase;
-
     initVMM();
+    VMAContext* kernelVmaContext = vmaCreateContext(kernelPagemap);
+    assert(kernelVmaContext, "Failed to create kernel VMA context");
+    kprintf("Created kernel VMA context @ 0x%.16llx", cast(ulong) kernelVmaContext);
+    int* b = cast(int*) vmaAllocPages(kernelVmaContext, 1024, VMM_PRESENT | VMM_WRITE);
+    assert(b, "Failed to allocate pages");
+    kprintf("test virt alloc -> 0x%.16llx", cast(ulong) b);
+    *b = 32;
 
-    // we are done
     kprintf("Atlas kernel v1.0-alpha, very cool :3");
     halt();
 }
