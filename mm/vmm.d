@@ -68,25 +68,24 @@ void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
     if (!(pagemap[pml4Idx] & VMM_PRESENT))
     {
         pagemap[pml4Idx] = cast(ulong) physRequestPages(1, false) | 0b111;
-        kprintf("PML3 -> 0x%.16llx", pagemap[pml4Idx]);
     }
 
     PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
     if (!(pml3[pml3Idx] & VMM_PRESENT))
     {
         pml3[pml3Idx] = cast(ulong) physRequestPages(1, false) | 0b111;
-        kprintf("PML2 -> 0x%.16llx", pml3[pml3Idx]);
     }
 
     PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    kprintf("PML2=0x%.16llx", cast(ulong) pml2);
     if (!(pml2[pml2Idx] & VMM_PRESENT))
     {
         pml2[pml2Idx] = cast(ulong) physRequestPages(1, false) | 0b111;
     }
 
     PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    pml1[pml1Idx] = phys | flags;
+    if(!(pml1[pml1Idx] & 1)) {
+        pml1[pml1Idx] = phys | flags;
+    }
 
     asm
     {
