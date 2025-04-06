@@ -155,6 +155,10 @@ void handleInterrupt(RegisterCtx* ctx)
     _renderRegister("ds", ctx.ds);
     kprintf("--------------------------------");
 
+    _renderRegister("err", ctx.err);
+    _renderRegister("vec", ctx.vector);
+    kprintf("--------------------------------");
+
     hcf();
 }
 

@@ -124,11 +124,12 @@ extern (C) void kmain()
     assert(hhdmReq.response, "Failed to get HHDM offset");
     initPMM();
 
-    int* test = cast(int*) physRequestPages(64, true);
+    ulong numPages = 1024;
+    int* test = cast(int*) physRequestPages(numPages, true);
     kprintf("test phys alloc -> 0x%.16llx", cast(ulong) test);
-    assert(test, "Failed to allocate 64 pages");
+    assert(test, "Failed to allocate pages");
     *test = 32;
-    physReleasePages(test, 64);
+    physReleasePages(test, numPages);
     kprintf("loaded phys bitmap @ 0x%.16llx", cast(ulong)&physBitmap);
 
     assert(kernelAddrReq.response, "Failed to get kernel address");
