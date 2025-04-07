@@ -14,7 +14,7 @@ NANOPRINTF_DEFINES = \
 	-DNANOPRINTF_USE_WRITEBACK_FORMAT_SPECIFIERS=0 \
 	-DNANOPRINTF_SNPRINTF_SAFE_TRIM_STRING_ON_OVERFLOW=1
 CFLAGS = \
-	-c -g -O2 -pipe -Wall -gdwarf \
+	-c -g -O2 -pipe -Wall -gdwarf -I.\
     -Wextra \
     -std=gnu11 \
     -ffreestanding \

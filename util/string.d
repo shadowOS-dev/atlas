@@ -12,6 +12,10 @@ extern (C) void* memcpy(void* dest, const(void)* src, size_t n);
 extern (C) void* memset(void* s, int c, size_t n);
 extern (C) void* memmove(void* dest, const(void)* src, size_t n);
 extern (C) int memcmp(const(void)* s1, const(void)* s2, size_t n);
+extern (C) char* strdup(const(char)* s);
+extern (C) char* strstr(const(char)* haystack, const(char)* needle);
+extern (C) char* strncpy(char* dest, const(char)* src, size_t n);
+extern (C) int strcmp(const(char)* str1, const(char)* str2);
 
 bool isInString(const(char)* haystack, const(char)* needle)
 {
