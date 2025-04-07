@@ -15,104 +15,125 @@ import init.entry;
 import lib.math;
 
 /* External */
-__gshared extern (C) extern char[] limineStart;
-__gshared extern (C) extern char[] limineEnd;
-__gshared extern (C) extern char[] textStart;
-__gshared extern (C) extern char[] textEnd;
-__gshared extern (C) extern char[] rodataStart;
-__gshared extern (C) extern char[] rodataEnd;
-__gshared extern (C) extern char[] dataStart;
-__gshared extern (C) extern char[] dataEnd;
+__gshared extern (C) extern char[] limineStart, limineEnd;
+__gshared extern (C) extern char[] textStart, textEnd;
+__gshared extern (C) extern char[] rodataStart, rodataEnd;
+__gshared extern (C) extern char[] dataStart, dataEnd;
 
-/* Defines */
-enum VMM_PRESENT = (1LU << 0);
-enum VMM_WRITE = (1LU << 1);
-enum VMM_USER = (1LU << 2);
-enum VMM_NX = (1LU << 63);
+/* Constants */
+enum VMM_PRESENT = 1LU << 0;
+enum VMM_WRITE = 1LU << 1;
+enum VMM_USER = 1LU << 2;
+enum VMM_NX = 1LU << 63;
 
-alias PageMap = ulong*;
+enum PAGE_MASK = 0x000FFFFFFFFFF000;
+enum PAGE_INDEX_MASK = 0x1FF;
+
+enum PML1_SHIFT = 12;
+enum PML2_SHIFT = 21;
+enum PML3_SHIFT = 30;
+enum PML4_SHIFT = 39;
 
 /* Globals */
 __gshared PageMap kernelPagemap;
 
-/* Functions */
-ulong virtToPhys(PageMap pagemap, ulong virt)
+/* The big man */
+struct PageMap
 {
-    ulong pml1Idx = (virt >> 12) & 0x1FF;
-    ulong pml2Idx = (virt >> 21) & 0x1FF;
-    ulong pml3Idx = (virt >> 30) & 0x1FF;
-    ulong pml4Idx = (virt >> 39) & 0x1FF;
+    ulong* table;
 
-    if (!(pagemap[pml4Idx] & VMM_PRESENT))
-        return 0;
-    PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml3[pml3Idx] & VMM_PRESENT))
-        return 0;
-    PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml2[pml2Idx] & VMM_PRESENT))
-        return 0;
-    PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml1[pml1Idx] & VMM_PRESENT))
-        return 0;
-
-    return pml1[pml1Idx] & 0x000FFFFFFFFFF000;
-}
-
-void virtMap(PageMap pagemap, ulong virt, ulong phys, ulong flags)
-{
-    ulong pml1Idx = (virt >> 12) & 0x1FF;
-    ulong pml2Idx = (virt >> 21) & 0x1FF;
-    ulong pml3Idx = (virt >> 30) & 0x1FF;
-    ulong pml4Idx = (virt >> 39) & 0x1FF;
-
-    if (!(pagemap[pml4Idx] & VMM_PRESENT))
+    this(ulong* t)
     {
-        pagemap[pml4Idx] = cast(ulong) physRequestPages(1, false) | VMM_PRESENT | VMM_WRITE;
+        assert(t, "Invalid table passed to pagemap constructor");
+        this.table = t;
     }
 
-    PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml3[pml3Idx] & VMM_PRESENT))
-        pml3[pml3Idx] = cast(ulong) physRequestPages(1, false) | VMM_PRESENT | VMM_WRITE;
-
-    PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml2[pml2Idx] & VMM_PRESENT))
-        pml2[pml2Idx] = cast(ulong) physRequestPages(1, false) | VMM_PRESENT | VMM_WRITE;
-
-    PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-    if (!(pml1[pml1Idx] & VMM_PRESENT))
-        pml1[pml1Idx] = phys | flags;
-    else
-        pml1[pml1Idx] = (pml1[pml1Idx] & ~0x000FFFFFFFFFF000) | (phys & 0x000FFFFFFFFFF000) | flags;
-}
-
-void virtUnMap(PageMap pagemap, ulong virt)
-{
-    ulong pml1Idx = (virt >> 12) & 0x1FF;
-    ulong pml2Idx = (virt >> 21) & 0x1FF;
-    ulong pml3Idx = (virt >> 30) & 0x1FF;
-    ulong pml4Idx = (virt >> 39) & 0x1FF;
-
-    if (pagemap[pml4Idx] & VMM_PRESENT)
+    private ulong pageIndex(ulong virt, uint shift) const
     {
-        PageMap pml3 = cast(PageMap)((pagemap[pml4Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-        if (pml3[pml3Idx] & VMM_PRESENT)
+        return (virt >> shift) & PAGE_INDEX_MASK;
+    }
+
+    private ulong* getTableOrAlloc(ulong* table, ulong index)
+    {
+        if (!(table[index] & VMM_PRESENT))
         {
-            PageMap pml2 = cast(PageMap)((pml3[pml3Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-            if (pml2[pml2Idx] & VMM_PRESENT)
-            {
-                PageMap pml1 = cast(PageMap)((pml2[pml2Idx] & 0x000FFFFFFFFFF000) + hhdmOffset);
-                if (pml1[pml1Idx] & VMM_PRESENT)
-                {
-                    pml1[pml1Idx] = 0;
-                }
-            }
+            const newPage = physRequestPages(1, false);
+            table[index] = cast(ulong) newPage | VMM_PRESENT | VMM_WRITE;
         }
+        return cast(ulong*)((table[index] & PAGE_MASK) + hhdmOffset);
+    }
+
+    ulong virtToPhys(ulong virt)
+    {
+        const pml4Idx = pageIndex(virt, PML4_SHIFT);
+        if (!(kernelPagemap.table[pml4Idx] & VMM_PRESENT))
+            return 0;
+
+        ulong* pml3 = getTableOrAlloc(kernelPagemap.table, pml4Idx);
+        const pml3Idx = pageIndex(virt, PML3_SHIFT);
+        if (!(pml3[pml3Idx] & VMM_PRESENT))
+            return 0;
+
+        ulong* pml2 = getTableOrAlloc(pml3, pml3Idx);
+        const pml2Idx = pageIndex(virt, PML2_SHIFT);
+        if (!(pml2[pml2Idx] & VMM_PRESENT))
+            return 0;
+
+        ulong* pml1 = getTableOrAlloc(pml2, pml2Idx);
+        const pml1Idx = pageIndex(virt, PML1_SHIFT);
+        if (!(pml1[pml1Idx] & VMM_PRESENT))
+            return 0;
+
+        return pml1[pml1Idx] & PAGE_MASK;
+    }
+
+    void map(ulong virt, ulong phys, ulong flags)
+    {
+        assert(kernelPagemap.table, "Invalid table in pagemap!");
+        const pml4Idx = pageIndex(virt, PML4_SHIFT);
+        const pml3Idx = pageIndex(virt, PML3_SHIFT);
+        const pml2Idx = pageIndex(virt, PML2_SHIFT);
+        const pml1Idx = pageIndex(virt, PML1_SHIFT);
+
+        ulong* pml3 = getTableOrAlloc(kernelPagemap.table, pml4Idx);
+        ulong* pml2 = getTableOrAlloc(pml3, pml3Idx);
+        ulong* pml1 = getTableOrAlloc(pml2, pml2Idx);
+
+        const newEntry = (phys & PAGE_MASK) | flags;
+
+        if (!(pml1[pml1Idx] & VMM_PRESENT))
+            pml1[pml1Idx] = newEntry;
+        else
+            pml1[pml1Idx] = (pml1[pml1Idx] & ~PAGE_MASK) | newEntry;
+    }
+
+    void unmap(ulong virt)
+    {
+        const pml4Idx = pageIndex(virt, PML4_SHIFT);
+        const pml3Idx = pageIndex(virt, PML3_SHIFT);
+        const pml2Idx = pageIndex(virt, PML2_SHIFT);
+        const pml1Idx = pageIndex(virt, PML1_SHIFT);
+
+        if (!(kernelPagemap.table[pml4Idx] & VMM_PRESENT))
+            return;
+
+        ulong* pml3 = cast(ulong*)((kernelPagemap.table[pml4Idx] & PAGE_MASK) + hhdmOffset);
+        if (!(pml3[pml3Idx] & VMM_PRESENT))
+            return;
+
+        ulong* pml2 = cast(ulong*)((pml3[pml3Idx] & PAGE_MASK) + hhdmOffset);
+        if (!(pml2[pml2Idx] & VMM_PRESENT))
+            return;
+
+        ulong* pml1 = cast(ulong*)((pml2[pml2Idx] & PAGE_MASK) + hhdmOffset);
+        if (pml1[pml1Idx] & VMM_PRESENT)
+            pml1[pml1Idx] = 0;
     }
 }
 
-void switchPagemap(PageMap pagemap)
+void switchPagemap(PageMap* pagemap)
 {
-    ulong phys = cast(ulong) pagemap - hhdmOffset;
+    const phys = cast(ulong) pagemap.table - hhdmOffset;
     kprintf("Switching to pagemap with phys=0x%.16llx", phys);
     asm
     {
@@ -123,11 +144,11 @@ void switchPagemap(PageMap pagemap)
 
 void initVMM()
 {
-    kernelPagemap = cast(PageMap)(cast(ulong) physRequestPages(1, true));
-    assert(kernelPagemap, "Failed to allocate kernel pagemap");
-    memset(kernelPagemap, 0, PAGE_SIZE);
+    kernelPagemap = PageMap(cast(ulong*) physRequestPages(1, true));
+    assert(kernelPagemap.table, "Failed to allocate kernel pagemap");
+    kprintf("Kernel pagemap table allocated at: 0x%.16llx", cast(ulong) kernelPagemap.table);
+    memset(kernelPagemap.table, 0, PAGE_SIZE);
 
-    kprintf("Kernel Pagemap is @ 0x%.16llx", cast(ulong) kernelPagemap);
     kprintf("Kernel Stack Top Address: 0x%.16llx", kernelStackTop);
     kprintf("Got kernel phys: 0x%.16llx, virt: 0x%.16llx", kernelAddrPhys, kernelAddrVirt);
 
@@ -137,34 +158,57 @@ void initVMM()
     kprintf("  rodata: start=0x%.16llx, end=0x%.16llx", cast(ulong)&rodataStart, cast(ulong)&rodataEnd);
     kprintf("  data  : start=0x%.16llx, end=0x%.16llx", cast(ulong)&dataStart, cast(ulong)&dataEnd);
 
-    for (ulong i = alignDown!ulong(cast(ulong)&limineStart, PAGE_SIZE); i < alignUp!ulong(
-            cast(ulong)&limineEnd, PAGE_SIZE); i += PAGE_SIZE)
-        virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_WRITE);
-    kprintf("Mapped limine section");
+    if (cast(ulong)&limineStart - cast(ulong)&limineEnd != 0)
+    {
+        ulong limineStartAligned = alignDown!ulong(cast(ulong)&limineStart, PAGE_SIZE);
+        ulong limineEndAligned = alignUp!ulong(cast(ulong)&limineEnd, PAGE_SIZE);
+        for (ulong i = limineStartAligned; i < limineEndAligned; i += PAGE_SIZE)
+        {
+            kernelPagemap.map(i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_WRITE);
+        }
+        kprintf("Mapped limine section");
+    }
+    else
+    {
+        kprintf("Size of limine section's are zero?");
+    }
 
     kernelStackTop = alignUp!ulong(kernelStackTop, PAGE_SIZE);
     for (ulong i = kernelStackTop - 65536; i < kernelStackTop; i += PAGE_SIZE)
-        virtMap(kernelPagemap, i, i - hhdmOffset, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    {
+        kernelPagemap.map(i, i - hhdmOffset, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    }
     kprintf("Mapped kernel stack");
 
-    for (ulong i = alignDown!ulong(cast(ulong)&textStart, PAGE_SIZE); i < alignUp!ulong(
-            cast(ulong)&textEnd, PAGE_SIZE); i += PAGE_SIZE)
-        virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT);
+    ulong textStartAligned = alignDown!ulong(cast(ulong)&textStart, PAGE_SIZE);
+    ulong textEndAligned = alignUp!ulong(cast(ulong)&textEnd, PAGE_SIZE);
+    for (ulong i = textStartAligned; i < textEndAligned; i += PAGE_SIZE)
+    {
+        kernelPagemap.map(i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT);
+    }
     kprintf("Mapped text section");
 
-    for (ulong i = alignDown!ulong(cast(ulong)&rodataStart, PAGE_SIZE); i < alignUp!ulong(
-            cast(ulong)&rodataEnd, PAGE_SIZE); i += PAGE_SIZE)
-        virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_NX);
+    ulong rodataStartAligned = alignDown!ulong(cast(ulong)&rodataStart, PAGE_SIZE);
+    ulong rodataEndAligned = alignUp!ulong(cast(ulong)&rodataEnd, PAGE_SIZE);
+    for (ulong i = rodataStartAligned; i < rodataEndAligned; i += PAGE_SIZE)
+    {
+        kernelPagemap.map(i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_NX);
+    }
     kprintf("Mapped rodata section");
 
-    for (ulong i = alignDown!ulong(cast(ulong)&dataStart, PAGE_SIZE); i < alignUp!ulong(
-            cast(ulong)&dataEnd, PAGE_SIZE); i += PAGE_SIZE)
-        virtMap(kernelPagemap, i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    ulong dataStartAligned = alignDown!ulong(cast(ulong)&dataStart, PAGE_SIZE);
+    ulong dataEndAligned = alignUp!ulong(cast(ulong)&dataEnd, PAGE_SIZE);
+    for (ulong i = dataStartAligned; i < dataEndAligned; i += PAGE_SIZE)
+    {
+        kernelPagemap.map(i, i - kernelAddrVirt + kernelAddrPhys, VMM_PRESENT | VMM_WRITE | VMM_NX);
+    }
     kprintf("Mapped data section");
 
     for (ulong i = 0; i < 0x100000000; i += PAGE_SIZE)
-        virtMap(kernelPagemap, i + hhdmOffset, i, VMM_PRESENT | VMM_WRITE);
+    {
+        kernelPagemap.map(i + hhdmOffset, i, VMM_PRESENT | VMM_WRITE);
+    }
     kprintf("Mapped HHDM");
 
-    switchPagemap(kernelPagemap);
+    switchPagemap(&kernelPagemap);
 }

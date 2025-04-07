@@ -50,7 +50,7 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
 {
     assert(ctx, "Invalid VMA context passed");
     assert(ctx.root, "Invalid VMA context passed");
-    assert(ctx.pagemap, "Invalid VMA context passed");
+    assert(ctx.pagemap.table, "Invalid VMA context passed");
 
     VMARegion* region = ctx.root;
     VMARegion* prevRegion = null;
@@ -76,7 +76,8 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
             {
                 ulong page = cast(ulong) physRequestPages(1, false);
                 assert(page != 0, "Failed to allocate physical memory for VMA region");
-                virtMap(ctx.pagemap, newRegion.start + (i * PAGE_SIZE), page, newRegion.flags);
+                ctx.pagemap.map(newRegion.start + (i * PAGE_SIZE), page, newRegion
+                        .flags);
             }
 
             return cast(void*) newRegion.start;
@@ -101,7 +102,7 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
     {
         ulong page = cast(ulong) physRequestPages(1, false);
         assert(page != 0, "Failed to allocate physical memory for VMA region");
-        virtMap(ctx.pagemap, newEndRegion.start + (i * PAGE_SIZE), page, newEndRegion.flags);
+        ctx.pagemap.map(newEndRegion.start + (i * PAGE_SIZE), page, newEndRegion.flags);
     }
     return cast(void*) newEndRegion.start;
 }
@@ -110,7 +111,7 @@ void vmaFreePages(VMAContext* ctx, void* ptr)
 {
     assert(ctx, "Invalid VMA context passed");
     assert(ctx.root, "Invalid VMA context passed");
-    assert(ctx.pagemap, "Invalid VMA context passed");
+    assert(ctx.pagemap.table, "Invalid VMA context passed");
     assert(ptr, "Invalid pointer passed");
 
     VMARegion* region = ctx.root;
@@ -134,12 +135,12 @@ void vmaFreePages(VMAContext* ctx, void* ptr)
     foreach (i; 0 .. region.size)
     {
         ulong virt = region.start + i * PAGE_SIZE;
-        ulong phys = virtToPhys(ctx.pagemap, virt);
+        ulong phys = ctx.pagemap.virtToPhys(virt);
 
         if (phys != 0)
         {
             physReleasePages(cast(void*) phys, 1);
-            virtUnMap(ctx.pagemap, virt);
+            ctx.pagemap.unmap(virt);
         }
     }
 
