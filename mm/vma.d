@@ -37,8 +37,9 @@ VMAContext* vmaCreateContext(PageMap pagemap)
 {
     VMAContext* ctx = cast(VMAContext*) physRequestPages(1, true);
     assert(ctx, "Failed to allocate memory for VMA context");
-    memset(ctx, 0, VMAContext.sizeof);
+    memset(ctx, 0, PAGE_SIZE);
     ctx.root = cast(VMARegion*) physRequestPages(1, true);
+    memset(ctx.root, 0, PAGE_SIZE);
     assert(ctx.root, "Failed to allocate memory for VMA root");
     ctx.pagemap = pagemap;
     ctx.root.start = PAGE_SIZE;
