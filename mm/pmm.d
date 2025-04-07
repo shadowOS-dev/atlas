@@ -136,3 +136,18 @@ void physReleasePages(void* ptr, size_t pages)
         }
     }
 }
+
+ulong physGetFreeMemory()
+{
+    ulong freePages = 0;
+
+    foreach (i; 0 .. physBitmapPages)
+    {
+        if (!bitmapGet(physBitmap, i))
+        {
+            freePages++;
+        }
+    }
+
+    return freePages * PAGE_SIZE;
+}

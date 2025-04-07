@@ -20,6 +20,8 @@ import sys.idt;
 import mm.pmm;
 import mm.vmm;
 import mm.vma;
+import mm.kmalloc;
+import mm.liballoc;
 
 /* Config */
 enum PAGE_SIZE = 0x1000; // 4096
@@ -29,13 +31,16 @@ __gshared flanterm_context* ftCtx;
 
 struct KernelConfig
 {
-    bool graphical_kprintf;
+    bool graphicalPrintf;
+    bool heapTrace;
 }
 
 __gshared KernelConfig kernelConf = KernelConfig(false);
 __gshared ulong kernelAddrVirt;
 __gshared ulong kernelAddrPhys;
 __gshared ulong kernelStackTop;
+
+__gshared VMAContext* kernelVmaContext;
 
 /* Limine Stuff */
 mixin(BaseRevision!("3"));
@@ -84,7 +89,8 @@ extern (C) void kmain()
     assert(kernelFileReq.response, "Failed to get kernel file");
     char* cmdline = kernelFileReq.response.kernelFile.cmdline;
     kprintf("cmdline: %s", cmdline);
-    kernelConf.graphical_kprintf = !isInString(cmdline, "quiet".ptr);
+    kernelConf.graphicalPrintf = !isInString(cmdline, "quiet".ptr);
+    kernelConf.heapTrace = isInString(cmdline, "heapTrace".ptr);
 
     // Framebuffer shit
     assert(framebufferReq.response != null && framebufferReq.response.framebuffers[0] != null, "Failed to get framebuffer");
@@ -137,14 +143,22 @@ extern (C) void kmain()
     kernelAddrPhys = kernelAddrReq.response.physicalBase;
     kernelAddrVirt = kernelAddrReq.response.virtualBase;
     initVMM();
-    VMAContext* kernelVmaContext = vmaCreateContext(kernelPagemap);
+    kernelVmaContext = vmaCreateContext(kernelPagemap);
     assert(kernelVmaContext, "Failed to create kernel VMA context");
     kprintf("Created kernel VMA context @ 0x%.16llx", cast(ulong) kernelVmaContext);
     int* b = cast(int*) vmaAllocPages(kernelVmaContext, 1024, VMM_PRESENT | VMM_WRITE);
     assert(b, "Failed to allocate pages");
     kprintf("test virt alloc -> 0x%.16llx", cast(ulong) b);
     *b = 32;
+    vmaFreePages(kernelVmaContext, b);
 
-    kprintf("Atlas kernel v1.0-alpha, very cool :3");
+    // Test heap
+    int* c = cast(int*) kmalloc(int.sizeof);
+    assert(c, "Failed to allocate on the heap");
+    *c = 32;
+    kprintf("test heap alloc -> 0x%.16llx", cast(ulong) c);
+    kfree(c);
+
+    kprintf("Atlas kernel v1.0-alpha, %d free bytes", physGetFreeMemory());
     halt();
 }

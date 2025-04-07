@@ -5,7 +5,7 @@ module mm.vma;
  *
  * License: Apache 2.0
  * Author: Kevin Alavik <kevin@alavik.se>
- * Date: April 5, 2025
+ * Date: April 6, 2025
  */
 
 import mm.vmm;
@@ -104,4 +104,59 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
         virtMap(ctx.pagemap, newEndRegion.start + (i * PAGE_SIZE), page, newEndRegion.flags);
     }
     return cast(void*) newEndRegion.start;
+}
+
+void vmaFreePages(VMAContext* ctx, void* ptr)
+{
+    assert(ctx, "Invalid VMA context passed");
+    assert(ctx.root, "Invalid VMA context passed");
+    assert(ctx.pagemap, "Invalid VMA context passed");
+    assert(ptr, "Invalid pointer passed");
+
+    VMARegion* region = ctx.root;
+    while (region != null)
+    {
+        if (region.start == cast(ulong) ptr)
+        {
+            break;
+        }
+        region = region.next;
+    }
+
+    if (region == null)
+    {
+        kprintf("Unable to find region to free");
+        return;
+    }
+
+    VMARegion* prev = region.prev;
+    VMARegion* next = region.next;
+    foreach (i; 0 .. region.size)
+    {
+        ulong virt = region.start + i * PAGE_SIZE;
+        ulong phys = virtToPhys(ctx.pagemap, virt);
+
+        if (phys != 0)
+        {
+            physReleasePages(cast(void*) phys, 1);
+            virtUnMap(ctx.pagemap, virt);
+        }
+    }
+
+    if (prev != null)
+    {
+        prev.next = next;
+    }
+
+    if (next != null)
+    {
+        next.prev = prev;
+    }
+
+    if (region == ctx.root)
+    {
+        ctx.root = next;
+    }
+
+    physReleasePages(region - hhdmOffset, 1);
 }

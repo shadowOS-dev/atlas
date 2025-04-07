@@ -14,20 +14,40 @@ import core.vararg;
 import lib.flanterm;
 import init.entry; // For flanterm writing on printf and kernelConf
 
+extern (C) void putc(int c, void* ctx)
+{
+    char ch = cast(char) c;
+    if (ftCtx && kernelConf.graphicalPrintf)
+    {
+        flanterm_write(ftCtx, &ch, 1);
+    }
+    outb(0xE9, cast(ubyte) c);
+}
+
+void puts(char* str)
+{
+    while (*str)
+    {
+        putc(*str++, null);
+    }
+}
+
 int printf(S...)(S args)
 {
     if (args.length == 0)
         return 0;
 
-    extern (C) void putc(int c, void* ctx)
+    return npf_pprintf(&putc, null, cast(const char*) args[0], args[1 .. $]);
+}
+
+int vprintf(const char* fmt, va_list args)
+{
+    char[1024] buff;
+    int length = npf_vsnprintf(cast(char*) buff, buff.sizeof, fmt, args);
+    if (length >= 0 && length < buff.sizeof)
     {
-        char ch = cast(char) c;
-        if (ftCtx && kernelConf.graphical_kprintf)
-        {
-            flanterm_write(ftCtx, &ch, 1);
-        }
-        outb(0xE9, cast(ubyte) c);
+        puts(cast(char*) buff);
     }
 
-    return npf_pprintf(&putc, null, cast(const char*) args[0], args[1 .. $]);
+    return length;
 }
