@@ -77,7 +77,7 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
             {
                 ulong page = cast(ulong) physRequestPages(1, false);
                 assert(page != 0, "Failed to allocate physical memory for VMA region");
-                memset(page + hhdmOffset, 0, PAGE_SIZE);
+                memset(cast(void*)(page + hhdmOffset), 0, PAGE_SIZE);
                 ctx.pagemap.map(newRegion.start + (i * PAGE_SIZE), page, newRegion
                         .flags);
             }
@@ -104,7 +104,7 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
     {
         ulong page = cast(ulong) physRequestPages(1, false);
         assert(page != 0, "Failed to allocate physical memory for VMA region");
-        memset(page + hhdmOffset, 0, PAGE_SIZE);
+        memset(cast(void*)(page + hhdmOffset), 0, PAGE_SIZE);
         ctx.pagemap.map(newEndRegion.start + (i * PAGE_SIZE), page, newEndRegion.flags);
     }
     return cast(void*) newEndRegion.start;
