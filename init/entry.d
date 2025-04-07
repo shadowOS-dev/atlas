@@ -22,7 +22,6 @@ import mm.vmm;
 import mm.vma;
 import mm.kmalloc;
 import mm.liballoc;
-import dev.vfs;
 
 /* Config */
 enum PAGE_SIZE = 0x1000; // 4096
@@ -159,9 +158,6 @@ extern (C) void kmain()
     *c = 32;
     kprintf("test heap alloc -> 0x%.16llx", cast(ulong) c);
     kfree(c);
-
-    // Setup filesystem(s)
-    VFS vfs = alloc!VFS();
 
     kprintf("Atlas kernel v1.0-alpha, %d free bytes", physGetFreeMemory());
     halt();
