@@ -53,13 +53,17 @@ struct PageMap
         return (virt >> shift) & PAGE_INDEX_MASK;
     }
 
-    private ulong* getTableOrAlloc(ulong* table, ulong index)
+    private ulong* getTableOrAlloc(ulong* table, ulong index, ulong flags)
     {
         if (!(table[index] & VMM_PRESENT))
         {
             const newPage = physRequestPages(1, false);
             memset(cast(void*)(cast(ulong) newPage + hhdmOffset), 0, PAGE_SIZE);
-            table[index] = cast(ulong) newPage | 0b111;
+            table[index] = cast(ulong) newPage | flags;
+        }
+        else
+        {
+            table[index] |= (flags & ~VMM_NX) & 0xff;
         }
         return cast(ulong*)((table[index] & PAGE_MASK) + hhdmOffset);
     }
@@ -101,9 +105,9 @@ struct PageMap
         const pml2Idx = pageIndex(virt, PML2_SHIFT);
         const pml1Idx = pageIndex(virt, PML1_SHIFT);
 
-        ulong* pml3 = getTableOrAlloc(kernelPagemap.table, pml4Idx);
-        ulong* pml2 = getTableOrAlloc(pml3, pml3Idx);
-        ulong* pml1 = getTableOrAlloc(pml2, pml2Idx);
+        ulong* pml3 = getTableOrAlloc(kernelPagemap.table, pml4Idx, flags);
+        ulong* pml2 = getTableOrAlloc(pml3, pml3Idx, flags);
+        ulong* pml1 = getTableOrAlloc(pml2, pml2Idx, flags);
 
         const newEntry = (phys & PAGE_MASK) | flags;
 
