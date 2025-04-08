@@ -110,7 +110,6 @@ void vfsInit()
     mount.root.mode = VNODE_MODE_RUSR | VNODE_MODE_WUSR | VNODE_MODE_XUSR |
         VNODE_MODE_RGRP | VNODE_MODE_XGRP |
         VNODE_MODE_ROTH | VNODE_MODE_XOTH;
-    spinlockInit(&mount.root.lock);
     mount.root.data = null;
     mount.root.ops = null;
     mount.root.size = 0;
@@ -255,64 +254,62 @@ Mount* vfsMount(const(char)* path, const(char)* type)
 
 Vnode* vfsCreateVnode(Vnode* parent, const(char)* name, uint type)
 {
-    spinlockAcquire(&parent.lock);
+    parent.lock.lock();
     if (!parent || parent.type != VNODE_DIR)
     {
         kprintf("Invalid parent vnode or parent is not a directory: %s", vfsGetFullPath(parent));
-        spinlockRelease(&parent.lock);
+        parent.lock.unlock();
         return null;
     }
 
     if (parent.ops && parent.ops.create)
     {
         Vnode* ret = parent.ops.create(parent, name, type);
-        spinlockRelease(&parent.lock);
+        parent.lock.unlock();
         return ret;
     }
 
     kprintf("Create operation not implemented for parent vnode '%s'", vfsGetFullPath(parent));
-    spinlockRelease(&parent.lock);
+    parent.lock.unlock();
     return null;
 }
 
 int vfsRead(Vnode* vnode, void* buf, size_t size, size_t offset)
 {
-    spinlockAcquire(&vnode.lock);
-
+    vnode.lock.lock();
     if (vnode is null || vnode.type == VNODE_DIR)
     {
         kprintf("Invalid vnode or unsupported type: %s", vfsTypeToStr(vnode ? vnode.type : 0));
-        spinlockRelease(&vnode.lock);
+        vnode.lock.unlock();
         return -1;
     }
 
     if (vnode.ops && vnode.ops.read)
     {
         int ret = vnode.ops.read(vnode, buf, size, offset);
-        spinlockRelease(&vnode.lock);
+        vnode.lock.unlock();
         return ret;
     }
 
     kprintf("Read operation not implemented for vnode '%s'", vnode.name);
-    spinlockRelease(&vnode.lock);
+    vnode.lock.unlock();
     return -1;
 }
 
 int vfsWrite(Vnode* vnode, const(void)* buf, size_t size, size_t offset)
 {
-    spinlockAcquire(&vnode.lock);
-
+    vnode.lock.lock();
     if (vnode is null || vnode.type == VNODE_DIR)
     {
         kprintf("Invalid vnode or unsupported type: %s", vfsTypeToStr(vnode ? vnode.type : 0));
-        spinlockRelease(&vnode.lock);
+        vnode.lock.unlock();
         return -1;
     }
 
     if (vnode.ops && vnode.ops.write)
     {
         int ret = vnode.ops.write(vnode, buf, size, offset);
-        spinlockRelease(&vnode.lock);
+        vnode.lock.unlock();
 
         vnode.mtime = 0; // todo: Actually update the modification date
 
@@ -320,7 +317,7 @@ int vfsWrite(Vnode* vnode, const(void)* buf, size_t size, size_t offset)
     }
 
     kprintf("Write operation not implemented for vnode '%s'", vnode.name);
-    spinlockRelease(&vnode.lock);
+    vnode.lock.unlock();
     return -1;
 }
 

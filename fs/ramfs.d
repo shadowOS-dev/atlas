@@ -127,15 +127,11 @@ int ramfsWrite(Vnode* node, const void* buf, size_t size, size_t offset)
 
 Vnode* ramfsCreate(Vnode* self, const char* name, uint type)
 {
-    spinlockRelease(&self.lock);
-
     if (!name || vfsLookup(self, name) !is null)
     {
         kprintf(cast(char*) "Could not create vnode '%s' as it already exists or invalid name", name);
         return null;
     }
-
-    spinlockAcquire(&self.lock);
 
     Vnode* newNode = cast(Vnode*) kmalloc(Vnode.sizeof);
     if (!newNode)
@@ -178,7 +174,6 @@ Vnode* ramfsCreate(Vnode* self, const char* name, uint type)
     newNode.ops.write = &ramfsWrite;
     newNode.ops.read = &ramfsRead;
     newNode.ops.create = &ramfsCreate;
-    spinlockInit(&newNode.lock);
 
     if (self.child is null)
     {
@@ -206,6 +201,7 @@ void ramfsInitUstar(Mount* mount, void* rawData, size_t size)
     while (offset < size)
     {
         auto header = cast(USTAR*)(rawData + offset);
+        assert(header);
         if (header.name[0] == '\0')
         {
             break;

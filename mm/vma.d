@@ -58,6 +58,7 @@ void* vmaAllocPages(VMAContext* ctx, size_t pages, ulong flags)
 
     while (region != null)
     {
+        assert(region);
         if (region.next == null || region.start + (region.size * PAGE_SIZE) < region.next.start)
         {
             VMARegion* newRegion = cast(VMARegion*) physRequestPages(1, true);

@@ -175,13 +175,17 @@ extern (C) void kmain()
     kprintf("Found %d modules", moduleReq.response.moduleCount);
     void* ramfsData = moduleReq.response.modules[0].address;
     ulong ramfsSize = cast(ulong) moduleReq.response.modules[0].size;
+    assert(ramfsData);
+    assert(ramfsSize != 0);
     ramfsInit(rootMount, RAMFS_TYPE_USTAR, ramfsData, ramfsSize);
 
     Vnode* test = vfsLazyLookup(rootMount, cast(char*) "/test.txt".ptr);
-    assert(test, "Failed to find /test.txt");
+    assert(test, "Failed to find /a.txt");
     char* buff = cast(char*) kmalloc(test.size);
     vfsRead(test, buff, test.size, 0);
-    kprintf("test.txt: %s", buff);
+
+    printf("\033[2J\033[H");
+    printf("%s", buff);
 
     halt();
 }

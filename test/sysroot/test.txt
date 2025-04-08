@@ -1,1 +1,38 @@
-Hello from a file!
+============================================================
+                    ~ Welcome to atlas ~
+     An experimental kernel for the ShadowOS project
+        Written in D, with a touch of C and assembly
+                    by Kevin Alavik (2025)
+============================================================
+
+                    ~ Special Thanks ~
+
+  • Piraterna - for hosting the git repository  
+    → https://git.piraterna.org
+    → https://piraterna.org
+
+  • purpleK2 and the RTOS project  
+    → https://github.com/purpleK2/rtos
+
+  • The Nanobyte and OSDev communities  
+    → for ideas, feedback, and continued support
+
+  • The D Programming Language  
+    → https://dlang.org/
+
+  • Everyone who has spent countless hours  
+    helping, debugging, and sharing knowledge
+
+------------------------------------------------------------
+
+     Copyright (c) 2025 Kevin Alavik <kevin@alavik.se>
+      Licensed under the Apache License, Version 2.0
+
+ You may obtain a copy of the License at:
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is provided "AS IS",
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ or implied. See the License for details.
+============================================================
