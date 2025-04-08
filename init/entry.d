@@ -9,7 +9,7 @@ module init.entry;
  */
 
 import util.cpu;
-import dev.portio;
+import sys.portio;
 import lib.printf;
 import init.limine;
 import lib.flanterm;
@@ -25,6 +25,8 @@ import mm.liballoc;
 import dev.vfs;
 import fs.ramfs;
 import lib.math;
+import fs.devfs;
+import dev.stdout;
 
 /* Config */
 enum PAGE_SIZE = 0x1000; // 4096
@@ -34,7 +36,6 @@ __gshared flanterm_context* ftCtx;
 
 struct KernelConfig
 {
-    bool graphicalPrintf;
     bool heapTrace;
 }
 
@@ -91,7 +92,6 @@ extern (C) void kmain()
     assert(kernelFileReq.response, "Failed to get kernel file");
     char* cmdline = kernelFileReq.response.kernelFile.cmdline;
     kprintf("cmdline: %s", cmdline);
-    kernelConf.graphicalPrintf = !isInString(cmdline, "quiet".ptr);
     kernelConf.heapTrace = isInString(cmdline, "heapTrace".ptr);
 
     // Framebuffer shit
@@ -166,24 +166,27 @@ extern (C) void kmain()
     kprintf("Root mount at 0x%.16llx", cast(ulong) rootMount);
     assert(moduleReq.response.moduleCount >= 1, "Expected at-least one module passed");
     kprintf("Found %d modules", moduleReq.response.moduleCount);
+
+    // Ramfs
     void* ramfsData = moduleReq.response.modules[0].address;
     ulong ramfsSize = cast(ulong) moduleReq.response.modules[0].size;
     assert(ramfsData);
     assert(ramfsSize != 0);
     ramfsInit(rootMount, RAMFS_TYPE_USTAR, ramfsData, ramfsSize);
 
+    // Devfs
+    devfsInit();
+    stdoutInit();
+
+    // Test read
     Vnode* msg = vfsLazyLookup(rootMount, cast(char*) "/root/welcome.txt".ptr);
     assert(msg, "Failed to find /root/welcome.txt");
     char* buff = cast(char*) kmalloc(msg.size);
     vfsRead(msg, buff, msg.size, 0);
 
-    kprintf("Atlas kernel v1.0-alpha");
-    ulong freeMiB = divRoundUp!ulong(
-        divRoundUp!ulong(physGetFreeMemory(), 1024), 1024);
-    if (checkMemoryStatus(freeMiB) == MemoryStatus.Critical)
-    {
-        kpanic(null, "You have critical low memory: %d MiB", freeMiB);
-    }
-    printf("%s", buff);
+    // Write the msg to stdout then free the buffer
+    fwrite(stdout, buff, msg.size);
+    kfree(buff);
+
     halt();
 }

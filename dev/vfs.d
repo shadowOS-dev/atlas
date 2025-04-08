@@ -274,6 +274,11 @@ Vnode* vfsCreateVnode(Vnode* parent, const(char)* name, uint type)
     return null;
 }
 
+void vfsDeleteNode(Vnode* node)
+{
+    assert(null, "vfsDeleteNode is unimplemented");
+}
+
 int vfsRead(Vnode* vnode, void* buf, size_t size, size_t offset)
 {
     vnode.lock.lock();

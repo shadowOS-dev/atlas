@@ -18,7 +18,7 @@ import lib.lock;
 enum RAMFS_TYPE_USTAR = 0x1;
 
 /* Structs */
-struct RAMFSData
+struct RamfsData
 {
     void* data;
     size_t size;
@@ -59,7 +59,7 @@ int ramfsRead(Vnode* node, void* buf, size_t size, size_t offset)
         kprintf(cast(char*) "Invalid vnode or not a file");
         return -1;
     }
-    RAMFSData* data = cast(RAMFSData*) node.data;
+    RamfsData* data = cast(RamfsData*) node.data;
     if (!data || offset >= data.size)
     {
         kprintf(cast(char*) "Invalid offset for read operation");
@@ -85,7 +85,7 @@ int ramfsWrite(Vnode* node, const void* buf, size_t size, size_t offset)
         return -1;
     }
 
-    auto data = cast(RAMFSData*) node.data;
+    auto data = cast(RamfsData*) node.data;
     if (!data)
     {
         kprintf(cast(char*) "Invalid data for write operation");
@@ -160,7 +160,7 @@ Vnode* ramfsCreate(Vnode* self, const char* name, uint type)
         ? (VNODE_MODE_RUSR | VNODE_MODE_WUSR | VNODE_MODE_RGRP | VNODE_MODE_ROTH) : (
             VNODE_MODE_RUSR | VNODE_MODE_WUSR | VNODE_MODE_RGRP);
 
-    RAMFSData* data = cast(RAMFSData*) kmalloc(RAMFSData.sizeof);
+    RamfsData* data = cast(RamfsData*) kmalloc(RamfsData.sizeof);
     if (!data)
     {
         kprintf(cast(char*) "Failed to allocate memory for ramfs data");
@@ -168,7 +168,7 @@ Vnode* ramfsCreate(Vnode* self, const char* name, uint type)
         return null;
     }
 
-    memset(data, 0, RAMFSData.sizeof);
+    memset(data, 0, RamfsData.sizeof);
     newNode.data = data;
     newNode.ops = cast(VnodeOps*) kmalloc(VnodeOps.sizeof);
     newNode.ops.write = &ramfsWrite;
@@ -269,7 +269,7 @@ void ramfsInitUstar(Mount* mount, void* rawData, size_t size)
                     return;
                 }
 
-                auto ramfsData = cast(RAMFSData*) kmalloc(RAMFSData.sizeof);
+                auto ramfsData = cast(RamfsData*) kmalloc(RamfsData.sizeof);
                 if (!ramfsData)
                 {
                     kprintf(cast(char*) "Failed to allocate memory for ramfs data");
