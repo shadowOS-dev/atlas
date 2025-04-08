@@ -152,7 +152,7 @@ void switchPagemap(PageMap* pagemap)
     }
 }
 
-void initVMM()
+void vmmInit()
 {
     kernelPagemap = PageMap(cast(ulong*) physRequestPages(1, true));
     assert(kernelPagemap.table, "Failed to allocate kernel pagemap");

@@ -22,6 +22,8 @@ import mm.vmm;
 import mm.vma;
 import mm.kmalloc;
 import mm.liballoc;
+import dev.vfs;
+import fs.ramfs;
 
 /* Config */
 enum PAGE_SIZE = 0x1000; // 4096
@@ -66,6 +68,11 @@ __gshared pragma(linkerDirective, "used, section=.limine_requests") HHDMRequest 
 
 __gshared pragma(linkerDirective, "used, section=.limine_requests") KernelAddressRequest kernelAddrReq = {
     id: mixin(KernelAddressRequestID!()),
+    revision: 0
+};
+
+__gshared pragma(linkerDirective, "used, section=.limine_requests") ModuleRequest moduleReq = {
+    id: mixin(ModuleRequestID!()),
     revision: 0
 };
 
@@ -120,16 +127,18 @@ extern (C) void kmain()
         0);
     assert(ftCtx, "Failed to initialize flanterm");
 
+    kprintf("Atlas kernel v1.0-alpha");
+
     // Interrupts
-    initGDT();
+    gdtInit();
     kprintf("loaded gdt @ 0x%.16llx", gdtPtr.base);
-    initIDT();
+    idtInit();
     kprintf("loaded idt @ 0x%.16llx", idtPtr.base);
 
     // Memory and heap
     assert(memmapReq.response, "Failed to get memory map");
     assert(hhdmReq.response, "Failed to get HHDM offset");
-    initPMM();
+    pmmInit();
 
     ulong numPages = 1024;
     int* a = cast(int*) physRequestPages(numPages, true);
@@ -142,7 +151,7 @@ extern (C) void kmain()
     assert(kernelAddrReq.response, "Failed to get kernel address");
     kernelAddrPhys = kernelAddrReq.response.physicalBase;
     kernelAddrVirt = kernelAddrReq.response.virtualBase;
-    initVMM();
+    vmmInit();
     kernelVmaContext = vmaCreateContext(kernelPagemap);
     assert(kernelVmaContext, "Failed to create kernel VMA context");
     kprintf("Created kernel VMA context @ 0x%.16llx", cast(ulong) kernelVmaContext);
@@ -159,6 +168,20 @@ extern (C) void kmain()
     kprintf("test heap alloc -> 0x%.16llx", cast(ulong) c);
     kfree(c);
 
-    kprintf("Atlas kernel v1.0-alpha, %d free bytes", physGetFreeMemory());
+    // Filesystem
+    vfsInit();
+    kprintf("Root mount at 0x%.16llx", cast(ulong) rootMount);
+    assert(moduleReq.response.moduleCount >= 1, "Expected at-least one module passed");
+    kprintf("Found %d modules", moduleReq.response.moduleCount);
+    void* ramfsData = moduleReq.response.modules[0].address;
+    ulong ramfsSize = cast(ulong) moduleReq.response.modules[0].size;
+    ramfsInit(rootMount, RAMFS_TYPE_USTAR, ramfsData, ramfsSize);
+
+    Vnode* test = vfsLazyLookup(rootMount, cast(char*) "/test.txt".ptr);
+    assert(test, "Failed to find /test.txt");
+    char* buff = cast(char*) kmalloc(test.size);
+    vfsRead(test, buff, test.size, 0);
+    kprintf("test.txt: %s", buff);
+
     halt();
 }

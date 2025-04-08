@@ -59,7 +59,7 @@ __gshared GDTEntry[5] gdt = GDTEntry(0);
 __gshared GDTPointer gdtPtr = GDTPointer(0);
 
 extern (C) void flushGDT(GDTPointer* ptr);
-void initGDT()
+void gdtInit()
 {
     gdt[0] = GDTEntry(0, 0, 0, 0x00, 0x00, 0); // Null segment
     gdt[1] = GDTEntry(0, 0, 0, GDT_KERNEL_CODE, GDT_GRANULARITY_FLAT, 0); // Kernel code segment

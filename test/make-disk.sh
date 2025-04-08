@@ -13,12 +13,16 @@ cd limine
 make CC="cc" CFLAGS="-g -O2 -pipe"
 cd ..
 
+rm -rf initramfs.img
+tar --format=ustar -cvf initramfs.img -C sysroot .
+
 rm -rf iso_root
 mkdir -p iso_root/boot
 mkdir -p iso_root/boot/limine
 mkdir -p iso_root/EFI/BOOT
 
 cp -v ../build/atlas.elf iso_root/boot/atlas
+cp -v initramfs.img iso_root/boot/ramfs
 cp -v limine.conf iso_root/boot/limine/
 cp -v limine/limine-bios.sys limine/limine-bios-cd.bin limine/limine-uefi-cd.bin iso_root/boot/limine/
 cp -v limine/BOOTX64.EFI iso_root/EFI/BOOT/

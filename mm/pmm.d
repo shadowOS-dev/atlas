@@ -21,7 +21,7 @@ __gshared ulong physBitmapPages;
 __gshared ulong physBitmapSize;
 __gshared ulong hhdmOffset;
 
-void initPMM()
+void pmmInit()
 {
     memmap = memmapReq.response;
     hhdmOffset = hhdmReq.response.offset;

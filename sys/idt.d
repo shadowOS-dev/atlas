@@ -53,7 +53,7 @@ extern (C) __gshared IDTIntrHandler[256] realHandlers = void;
 extern (C) extern __gshared ulong[256] stubs;
 __gshared IDTPointer idtPtr = IDTPointer(0);
 
-__gshared immutable string[32] exceptionMessages = [
+__gshared immutable char*[32] exceptionMessages = [
     "Division by Zero",
     "Debug",
     "Non-Maskable-Interrupt",
@@ -113,7 +113,7 @@ void _renderRegister(const char* label, ulong value)
 
 void handleInterrupt(RegisterCtx* ctx)
 {
-    kprintf("\x1b[31m%s at 0x%.16llx\x1b[0m", exceptionMessages[ctx.vector].ptr, ctx.rip);
+    kprintf("\x1b[31m%s at 0x%.16llx\x1b[0m", exceptionMessages[ctx.vector], ctx.rip);
 
     _renderRegister("rip", ctx.rip);
     _renderRegister("cs", ctx.cs);
@@ -162,7 +162,7 @@ void handleInterrupt(RegisterCtx* ctx)
     hcf();
 }
 
-void initIDT()
+void idtInit()
 {
     idtPtr.limit = cast(ushort)((idt.length * IDTEntry.sizeof) - 1);
     idtPtr.base = cast(ulong)(&idt);

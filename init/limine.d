@@ -205,3 +205,35 @@ struct KernelAddressRequest
     ulong revision;
     KernelAddressResponse* response;
 }
+
+/* Modules */
+template ModuleRequestID()
+{
+    const char[] ModuleRequestID = "[ " ~ mixin(
+        CommonMagic!()) ~ ", 0x3e7e279702be32af, 0xca1c4f3bd1280cee ]";
+}
+
+immutable ulong InternalModuleRequired = (1 << 0);
+
+struct InternalModule
+{
+    const(char)* path;
+    const(char)* cmdline;
+    ulong flags;
+}
+
+struct ModuleResponse
+{
+    ulong revision;
+    ulong moduleCount;
+    File** modules;
+}
+
+struct ModuleRequest
+{
+    ulong[4] id;
+    ulong revision;
+    ModuleResponse* response;
+    ulong internalModuleCount;
+    InternalModule** internalModules;
+}
