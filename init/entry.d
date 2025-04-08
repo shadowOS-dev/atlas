@@ -24,6 +24,7 @@ import mm.kmalloc;
 import mm.liballoc;
 import dev.vfs;
 import fs.ramfs;
+import lib.math;
 
 /* Config */
 enum PAGE_SIZE = 0x1000; // 4096
@@ -77,12 +78,6 @@ __gshared pragma(linkerDirective, "used, section=.limine_requests") ModuleReques
 };
 
 /* Entry Point */
-extern (C) void __assert(const(char)* msg, const(char)* file, uint line)
-{
-    printf("%s:%d: Assertion failed: \"%s\"\n", file, line, msg);
-    hcf();
-}
-
 extern (C) void kmain()
 {
     asm
@@ -126,8 +121,6 @@ extern (C) void kmain()
         0, 0,
         0);
     assert(ftCtx, "Failed to initialize flanterm");
-
-    kprintf("Atlas kernel v1.0-alpha");
 
     // Interrupts
     gdtInit();
@@ -179,13 +172,18 @@ extern (C) void kmain()
     assert(ramfsSize != 0);
     ramfsInit(rootMount, RAMFS_TYPE_USTAR, ramfsData, ramfsSize);
 
-    Vnode* test = vfsLazyLookup(rootMount, cast(char*) "/test.txt".ptr);
-    assert(test, "Failed to find /a.txt");
-    char* buff = cast(char*) kmalloc(test.size);
-    vfsRead(test, buff, test.size, 0);
+    Vnode* msg = vfsLazyLookup(rootMount, cast(char*) "/root/welcome.txt".ptr);
+    assert(msg, "Failed to find /root/welcome.txt");
+    char* buff = cast(char*) kmalloc(msg.size);
+    vfsRead(msg, buff, msg.size, 0);
 
-    printf("\033[2J\033[H");
+    kprintf("Atlas kernel v1.0-alpha");
+    ulong freeMiB = divRoundUp!ulong(
+        divRoundUp!ulong(physGetFreeMemory(), 1024), 1024);
+    if (checkMemoryStatus(freeMiB) == MemoryStatus.Critical)
+    {
+        kpanic(null, "You have critical low memory: %d MiB", freeMiB);
+    }
     printf("%s", buff);
-
     halt();
 }

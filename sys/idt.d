@@ -11,9 +11,12 @@ module sys.idt;
 import lib.log;
 import sys.gdt;
 import util.cpu;
+import lib.printf;
+import core.vararg;
 
 /* Defines */
 enum IDT_INTERRUPT_GATE = 0x8E;
+
 enum IDT_TRAP_GATE = 0x8F;
 enum IDT_IRQ_BASE = 0x20;
 
@@ -106,59 +109,68 @@ void setGate(int interrupt, ulong base, ubyte flags)
     idt[interrupt].zero = 0;
 }
 
-void _renderRegister(const char* label, ulong value)
+extern (C) void __assert(const(char)* msg, const(char)* file, uint line)
 {
-    kprintf("\t%-8.3s: 0x%.16lx", label, value);
+    kpanic(null, "%s:%d: Assertion failed: \"%s\"\n", file, line, msg);
+}
+
+extern (C) void kpanic(RegisterCtx* ctx, const char* fmt, ...)
+{
+    printf("\x1b[48;5;33m\x1b[97m\x1b[1m");
+    printf("\x1b[?25l\x1b[2J\x1b[H");
+
+    printf("**** ATLAS KERNEL PANIC ****\n\n");
+
+    if (fmt)
+    {
+        va_list args;
+        va_start(args, fmt);
+        vprintf(fmt, args);
+        va_end(args);
+        printf("\n");
+    }
+    printf(
+        "\nA critical and unrecoverable error has occurred within the Atlas Kernel, which has caused the system to enter an unstable state.\n");
+    printf(
+        "This error is severe and has resulted in the inability of the system to continue functioning properly.\n");
+    printf("As a result, the system is no longer able to operate safely, and a restart is required to recover from this failure.\n\n");
+
+    printf(
+        "If this issue persists after restarting, or if you require further assistance to diagnose or resolve the problem,\n");
+    printf("please do not hesitate to reach out to the following contact for support:\n");
+    printf("\n");
+    printf("   Name: Kevin Alavik\n");
+    printf("   Email: kevin@alavik.se\n");
+    printf(
+        "   Please provide any relevant details or error logs when contacting for quicker resolution.\n\n");
+
+    if (ctx)
+    {
+        printf("Register dump (for debugging purposes):\n");
+        printf("  RAX: %016x  RBX:    %016x  RCX: %016x  RDX: %016x\n", ctx.rax, ctx.rbx, ctx.rcx, ctx
+                .rdx);
+        printf("  RSI: %016x  RDI:    %016x  RBP: %016x  R8:  %016x\n", ctx.rsi, ctx.rdi, ctx.rbp, ctx
+                .r8);
+        printf("  R9:  %016x  R10:    %016x  R11: %016x  R12: %016x\n", ctx.r9, ctx.r10, ctx.r11, ctx
+                .r12);
+        printf("  R13: %016x  R14:    %016x  R15: %016x\n", ctx.r13, ctx.r14, ctx.r15);
+        printf("  RIP: %016x  RFLAGS: %016x  RSP: %016x  SS:  %016x\n", ctx.rip, ctx.rflags, ctx.rsp, ctx
+                .ss);
+        printf("  CR0: %016x  CR2:    %016x  CR3: %016x  CR4: %016x\n", ctx.cr0, ctx.cr2, ctx.cr3, ctx
+                .cr4);
+        printf("  ES:  %016x  DS:     %016x\n", ctx.es, ctx.ds);
+    }
+
+    printf(
+        "\nThe system has encountered a fatal error. Please restart your machine.\n");
+    printf("If this issue persists, we request a detailed bug report for further investigation.\n");
+    printf("\x1b[?25h");
+    hcf();
 }
 
 void handleInterrupt(RegisterCtx* ctx)
 {
-    kprintf("\x1b[31m%s at 0x%.16llx\x1b[0m", exceptionMessages[ctx.vector], ctx.rip);
-
-    _renderRegister("rip", ctx.rip);
-    _renderRegister("cs", ctx.cs);
-    _renderRegister("rflags", ctx.rflags);
-    _renderRegister("rsp", ctx.rsp);
-    kprintf("--------------------------------");
-
-    _renderRegister("ss", ctx.ss);
-    _renderRegister("rax", ctx.rax);
-    _renderRegister("rbx", ctx.rbx);
-    _renderRegister("rcx", ctx.rcx);
-    kprintf("--------------------------------");
-
-    _renderRegister("rdx", ctx.rdx);
-    _renderRegister("rbp", ctx.rbp);
-    _renderRegister("rdi", ctx.rdi);
-    _renderRegister("rsi", ctx.rsi);
-    kprintf("--------------------------------");
-
-    _renderRegister("r8", ctx.r8);
-    _renderRegister("r9", ctx.r9);
-    _renderRegister("r10", ctx.r10);
-    _renderRegister("r11", ctx.r11);
-    kprintf("--------------------------------");
-
-    _renderRegister("r12", ctx.r12);
-    _renderRegister("r13", ctx.r13);
-    _renderRegister("r14", ctx.r14);
-    _renderRegister("r15", ctx.r15);
-    kprintf("--------------------------------");
-
-    _renderRegister("cr0", ctx.cr0);
-    _renderRegister("cr2", ctx.cr2);
-    _renderRegister("cr3", ctx.cr3);
-    _renderRegister("cr4", ctx.cr4);
-    kprintf("--------------------------------");
-
-    _renderRegister("es", ctx.es);
-    _renderRegister("ds", ctx.ds);
-    kprintf("--------------------------------");
-
-    _renderRegister("err", ctx.err);
-    _renderRegister("vec", ctx.vector);
-    kprintf("--------------------------------");
-
+    kpanic(ctx, "Exception caught: %s".ptr, exceptionMessages[ctx.vector]);
     hcf();
 }
 

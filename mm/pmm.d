@@ -15,12 +15,14 @@ import util.bitmap;
 import lib.math;
 import util.string;
 
+/* Globals */
 __gshared MemmapResponse* memmap;
 __gshared ubyte[] physBitmap;
 __gshared ulong physBitmapPages;
 __gshared ulong physBitmapSize;
 __gshared ulong hhdmOffset;
 
+/* Main logic */
 void pmmInit()
 {
     memmap = memmapReq.response;
@@ -134,6 +136,34 @@ void physReleasePages(void* ptr, size_t pages)
         {
             bitmapClear(physBitmap, start + i);
         }
+    }
+}
+
+/* Utilities */
+enum MemoryStatus
+{
+    Critical,
+    Low,
+    OK
+}
+
+MemoryStatus checkMemoryStatus(ulong freeMemoryMiB)
+{
+    if (freeMemoryMiB < 32)
+    {
+        kprintf("\033[91mInsufficient memory: Only %d MiB available. System performance may be severely impacted.\033[0m\n", freeMemoryMiB);
+        return MemoryStatus.Critical;
+    }
+    else if (freeMemoryMiB < 64)
+    {
+        kprintf("\033[93mLow available memory: %d MiB remaining. Consider upgrading hardware.\033[0m\n", freeMemoryMiB);
+        return MemoryStatus.Low;
+    }
+    else
+    {
+        kprintf(
+            "\033[92mSufficient memory: %d MiB available. System operating running smoooooth.\033[0m\n", freeMemoryMiB);
+        return MemoryStatus.OK;
     }
 }
 
