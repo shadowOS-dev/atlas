@@ -12,17 +12,38 @@ import lib.nanoprintf;
 import sys.portio;
 import core.vararg;
 import dev.vfs;
+import dev.stdout;
+import init.entry;
+import lib.flanterm;
+import sys.idt;
 
 extern (C) void putc(int c, void* ctx)
 {
     char ch = cast(char) c;
+
     outb(0xE9, ch);
+
+    if (panicking)
+    {
+        if (ftCtx)
+        {
+            flanterm_write(ftCtx, &ch, 1);
+        }
+    }
 }
 
 void puts(char* str)
 {
     while (*str)
         putc(*str++, null);
+}
+
+void put(char* buff, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        putc(buff[i], null);
+    }
 }
 
 int printf(S...)(S args)

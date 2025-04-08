@@ -188,5 +188,7 @@ extern (C) void kmain()
     fwrite(stdout, buff, msg.size);
     kfree(buff);
 
+    // *cast(ulong*) 0xdeadbeef = 0xdead;
+
     halt();
 }

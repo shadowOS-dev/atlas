@@ -151,7 +151,6 @@ void vmaFreePages(VMAContext* ctx, void* ptr)
     {
         prev.next = next;
     }
-
     if (next != null)
     {
         next.prev = prev;
@@ -161,6 +160,9 @@ void vmaFreePages(VMAContext* ctx, void* ptr)
     {
         ctx.root = next;
     }
+
+    region.next = null;
+    region.prev = null;
 
     physReleasePages(region - hhdmOffset, 1);
 }

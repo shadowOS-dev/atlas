@@ -13,6 +13,7 @@ import sys.gdt;
 import util.cpu;
 import lib.printf;
 import core.vararg;
+import dev.stdout;
 
 /* Defines */
 enum IDT_INTERRUPT_GATE = 0x8E;
@@ -91,6 +92,8 @@ __gshared immutable char*[32] exceptionMessages = [
     "RESERVED VECTOR"
 ];
 
+__gshared bool panicking = false;
+
 /* Generic */
 void setGate(int interrupt, ulong base, ubyte flags)
 {
@@ -116,6 +119,12 @@ extern (C) void __assert(const(char)* msg, const(char)* file, uint line)
 
 extern (C) void kpanic(RegisterCtx* ctx, const char* fmt, ...)
 {
+    if (panicking)
+    {
+        hcf(); // prevent panic during panic
+    }
+
+    panicking = true;
     printf("\x1b[48;5;33m\x1b[97m\x1b[1m");
     printf("\x1b[?25l\x1b[2J\x1b[H");
 
@@ -147,24 +156,25 @@ extern (C) void kpanic(RegisterCtx* ctx, const char* fmt, ...)
     if (ctx)
     {
         printf("Register dump (for debugging purposes):\n");
-        printf("  RAX: %016x  RBX:    %016x  RCX: %016x  RDX: %016x\n", ctx.rax, ctx.rbx, ctx.rcx, ctx
+        printf("  RAX: %.16llx  RBX:    %.16llx  RCX: %.16llx  RDX: %.16llx\n", ctx.rax, ctx.rbx, ctx.rcx, ctx
                 .rdx);
-        printf("  RSI: %016x  RDI:    %016x  RBP: %016x  R8:  %016x\n", ctx.rsi, ctx.rdi, ctx.rbp, ctx
+        printf("  RSI: %.16llx  RDI:    %.16llx  RBP: %.16llx  R8:  %.16llx\n", ctx.rsi, ctx.rdi, ctx.rbp, ctx
                 .r8);
-        printf("  R9:  %016x  R10:    %016x  R11: %016x  R12: %016x\n", ctx.r9, ctx.r10, ctx.r11, ctx
+        printf("  R9:  %.16llx  R10:    %.16llx  R11: %.16llx  R12: %.16llx\n", ctx.r9, ctx.r10, ctx.r11, ctx
                 .r12);
-        printf("  R13: %016x  R14:    %016x  R15: %016x\n", ctx.r13, ctx.r14, ctx.r15);
-        printf("  RIP: %016x  RFLAGS: %016x  RSP: %016x  SS:  %016x\n", ctx.rip, ctx.rflags, ctx.rsp, ctx
+        printf("  R13: %.16llx  R14:    %.16llx  R15: %.16llx\n", ctx.r13, ctx.r14, ctx.r15);
+        printf("  RIP: %.16llx  RFLAGS: %.16llx  RSP: %.16llx  SS:  %.16llx\n", ctx.rip, ctx.rflags, ctx.rsp, ctx
                 .ss);
-        printf("  CR0: %016x  CR2:    %016x  CR3: %016x  CR4: %016x\n", ctx.cr0, ctx.cr2, ctx.cr3, ctx
+        printf("  CR0: %.16llx  CR2:    %.16llx  CR3: %.16llx  CR4: %.16llx\n", ctx.cr0, ctx.cr2, ctx.cr3, ctx
                 .cr4);
-        printf("  ES:  %016x  DS:     %016x\n", ctx.es, ctx.ds);
+        printf("  ES:  %.16llx  DS:     %.16llx\n", ctx.es, ctx.ds);
     }
 
     printf(
         "\nThe system has encountered a fatal error. Please restart your machine.\n");
     printf("If this issue persists, we request a detailed bug report for further investigation.\n");
     printf("\x1b[?25h");
+    panicking = false;
     hcf();
 }
 
