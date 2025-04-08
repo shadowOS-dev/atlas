@@ -168,6 +168,7 @@ extern (C) void kpanic(RegisterCtx* ctx, const char* fmt, ...)
         printf("  CR0: %.16llx  CR2:    %.16llx  CR3: %.16llx  CR4: %.16llx\n", ctx.cr0, ctx.cr2, ctx.cr3, ctx
                 .cr4);
         printf("  ES:  %.16llx  DS:     %.16llx\n", ctx.es, ctx.ds);
+        printf("  ERR: %.16llx\n", ctx.err);
     }
 
     printf(
