@@ -13,6 +13,7 @@ import lib.log;
 import util.string;
 import init.entry;
 import lib.math;
+import init.limine;
 
 /* External */
 __gshared extern (C) extern char[] limineStart, limineEnd;
@@ -190,6 +191,7 @@ void vmmInit()
     }
     kprintf("Mapped kernel stack");
 
+    // Map sections
     ulong textStartAligned = alignDown!ulong(cast(ulong)&textStart, PAGE_SIZE);
     ulong textEndAligned = alignUp!ulong(cast(ulong)&textEnd, PAGE_SIZE);
     for (ulong i = textStartAligned; i < textEndAligned; i += PAGE_SIZE)
@@ -214,11 +216,45 @@ void vmmInit()
     }
     kprintf("Mapped data section");
 
-    for (ulong i = 0; i < 0x100000000; i += PAGE_SIZE)
+    // Map HHDM
+    for (ulong addr = 0; addr < 0x100000000; addr += PAGE_SIZE)
     {
-        kernelPagemap.map(i + hhdmOffset, i, VMM_PRESENT | VMM_WRITE);
+        kernelPagemap.map(addr + hhdmOffset, addr, VMM_PRESENT | VMM_WRITE);
     }
     kprintf("Mapped HHDM");
+
+    // Map memory regions
+    foreach (i; 0 .. memmap.entryCount)
+    {
+        // Just for debug
+        MemmapEntry* entry = memmap.entries[i];
+        kprintf("Entry %u: Base=0x%016lx Length=0x%016lx Type=%s",
+            i,
+            entry.base,
+            entry.length,
+            cast(char*) memoryTypeToString(entry.type).ptr
+        );
+    }
+
+    for (ulong addr = 0; addr < 0x100000000; addr += PAGE_SIZE)
+    {
+        foreach (i; 0 .. memmap.entryCount)
+        {
+            MemmapEntry* entry = memmap.entries[i];
+            if (entry.type == MemoryMapUsable || entry.type == MemoryMapKernelAndModules || entry.type == MemoryMapFramebuffer)
+            {
+                ulong entry_start = entry.base;
+                ulong entry_end = entry.base + entry.length;
+
+                if (addr >= entry_start && addr < entry_end)
+                {
+                    kernelPagemap.map(addr + hhdmOffset, addr, VMM_PRESENT | VMM_WRITE);
+                    break;
+                }
+            }
+        }
+    }
+    kprintf("Mapped usable memory regions.");
 
     switchPagemap(&kernelPagemap);
 }

@@ -181,3 +181,28 @@ ulong physGetFreeMemory()
 
     return freePages * PAGE_SIZE;
 }
+
+string memoryTypeToString(ulong type)
+{
+    switch (type)
+    {
+    case MemoryMapUsable:
+        return "Usable";
+    case MemoryMapReserved:
+        return "Reserved";
+    case MemoryMapACPIReclaimable:
+        return "ACPI Reclaimable";
+    case MemoryMapACPINVS:
+        return "ACPI NVS";
+    case MemoryMapBadMemory:
+        return "Bad Memory";
+    case MemoryMapBootloaderReclaimable:
+        return "Bootloader Reclaimable";
+    case MemoryMapKernelAndModules:
+        return "Kernel and Modules";
+    case MemoryMapFramebuffer:
+        return "Framebuffer";
+    default:
+        return "Unknown";
+    }
+}
